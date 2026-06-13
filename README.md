@@ -39,6 +39,56 @@ matcha/
 └── manage.py            # Django management script
 ```
 
+## 🏗 Architecture & Data Flow
+
+```mermaid
+graph TD
+    %% Define Styles
+    classDef frontend fill:#61DAFB,stroke:#333,stroke-width:2px,color:black;
+    classDef backend fill:#092E20,stroke:#333,stroke-width:2px,color:white;
+    classDef async fill:#FF9900,stroke:#333,stroke-width:2px,color:black;
+    classDef ai fill:#9C27B0,stroke:#333,stroke-width:2px,color:white;
+    classDef db fill:#336791,stroke:#333,stroke-width:2px,color:white;
+
+    subgraph "Frontend Client (React/Vite)"
+        UI["React UI Components"]:::frontend
+        State["Redux Store"]:::frontend
+        Auth["Clerk Authentication"]:::frontend
+    end
+
+    subgraph "Django Backend Core"
+        API["Django REST API (views.py)"]:::backend
+        DB["SQLite Database (models.py)"]:::db
+    end
+
+    subgraph "Asynchronous Workers"
+        Broker["Redis Message Broker"]:::async
+        Worker["Celery Worker (tasks.py)"]:::async
+    end
+
+    subgraph "AI & RAG Engine"
+        Agent["LangChain Agents (agents.py)"]:::ai
+        VectorStore["ChromaDB Storage (knowledge_base.py)"]:::db
+        LLM["OpenAI API"]:::ai
+    end
+
+    %% Data Flow
+    Auth -.->|JWT Tokens| UI
+    UI <-->|Manage State| State
+    UI -->|HTTP Requests (Uploads, Fetch)| API
+    API -->|CRUD Operations| DB
+    
+    API -->|Enqueue Task (JD/Resume)| Broker
+    Broker -->|Consume Task| Worker
+    Worker -->|Trigger Evaluation| Agent
+    
+    Agent -->|Embed & Retrieve context| VectorStore
+    Agent -->|Send Prompt & Context| LLM
+    LLM -->|Return Match Results| Agent
+    
+    Agent -->|Save Evaluation Report| DB
+```
+
 ## 🛠 Tech Stack
 
 **Frontend:**
