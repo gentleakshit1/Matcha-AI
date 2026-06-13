@@ -75,15 +75,15 @@ graph TD
     %% Data Flow
     Auth -.->|JWT Tokens| UI
     UI <-->|Manage State| State
-    UI -->|HTTP Requests (Uploads, Fetch)| API
+    UI -->|HTTP Requests - Uploads and Fetch| API
     API -->|CRUD Operations| DB
     
-    API -->|Enqueue Task (JD/Resume)| Broker
+    API -->|Enqueue Task - JD or Resume| Broker
     Broker -->|Consume Task| Worker
     Worker -->|Trigger Evaluation| Agent
     
-    Agent -->|Embed & Retrieve context| VectorStore
-    Agent -->|Send Prompt & Context| LLM
+    Agent -->|Embed and Retrieve context| VectorStore
+    Agent -->|Send Prompt and Context| LLM
     LLM -->|Return Match Results| Agent
     
     Agent -->|Save Evaluation Report| DB
