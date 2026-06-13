@@ -1,0 +1,108 @@
+import os
+from typing import TypedDict, Dict, Any, List
+from langgraph.graph import StateGraph, START, END
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_chroma import Chroma
+from langchain_ollama import OllamaEmbeddings
+
+# =====================================================================
+# 1. STATE DEFINITION MATRIX
+# =====================================================================
+class IngestionState(TypedDict):
+    """
+    Tracks the shared memory state of the JD ingestion graph.
+    """
+    file_path: str                 # Absolute physical path to the saved PDF file
+    raw_text: str                  # Plucked string text extracted from the file
+    chunks: List[Any]              # Array of structured text chunk documents
+    collection_name: str           # Unique directory partition identifier for this specific JD
+    ingestion_status: str          # Final confirmation message logged to console
+
+# =====================================================================
+# 2. AUTONOMOUS AGENT NODES
+# =====================================================================
+
+def pdf_extraction_node(state: IngestionState) -> Dict[str, Any]:
+    """
+    Node 1: Extract raw text from the uploaded PDF document.
+    """
+    print("\n--- [Node 1: Extracting text from PDF Document...] ---")
+    target_path = state["file_path"]
+    
+    loader = PyPDFLoader(target_path)
+    pages = loader.load()
+    extracted_text = " ".join([page.page_content for page in pages])
+    
+    print(f"✓ Successfully extracted {len(extracted_text)} characters from document.")
+    return {"raw_text": extracted_text}
+
+
+def text_chunking_node(state: IngestionState) -> Dict[str, Any]:
+    """
+    Node 2: Break massive text blocks into smart overlapping chunks.
+    """
+    print("\n--- [Node 2: Processing character text splitting...] ---")
+    source_text = state["raw_text"]
+    
+    # 500 character chunks with 100 character overlaps prevents data gaps at the edges
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=100,
+        length_function=len
+    )
+    text_chunks = splitter.create_documents([source_text])
+    
+    print(f"✓ Formed {len(text_chunks)} distinct structural chunks from knowledge pool.")
+    return {"chunks": text_chunks}
+
+
+def local_vector_storage_node(state: IngestionState) -> Dict[str, Any]:
+    """
+    Node 3: Compute embedding vectors locally and save them to an isolated folder using Chroma.
+    """
+    print("\n--- [Node 3: Indexing vectors into local Chroma DB instance...] ---")
+    document_chunks = state["chunks"]
+    target_collection = state["collection_name"]
+    
+    # Local, free embedding generator running on your qwen3 / nomic background setups
+    embeddings_engine = OllamaEmbeddings(model="nomic-embed-text")
+    
+    # Automatically creates a clean, dedicated storage folder right inside your project root
+    persist_directory = os.path.join(os.getcwd(), "chroma_storage")
+    
+    # Initialize Chroma. It automatically creates the directory, vectorizes text, and saves it.
+    vector_store = Chroma.from_documents(
+        documents=document_chunks,
+        embedding=embeddings_engine,
+        collection_name=target_collection,
+        persist_directory=persist_directory
+    )
+    
+    status_log = f"Successfully synchronized {len(document_chunks)} vector records inside local collection '{target_collection}'."
+    print(f"✓ {status_log}")
+    return {"ingestion_status": status_log}
+
+# =====================================================================
+# 3. GRAPH ORCHESTRATION COMPILATION
+# =====================================================================
+
+# Initialize state machine using our strict IngestionState dictionary schema
+builder = StateGraph(IngestionState)
+
+# Register independent nodes inside execution pipeline matrix
+# (We keep the extractor node registered so your code structure doesn't break)
+builder.add_node("extractor", pdf_extraction_node)
+builder.add_node("chunker", text_chunking_node)
+builder.add_node("local_store", local_vector_storage_node)
+
+# =====================================================================
+# 🔥 THE FIX: CHANGE THE STARTING EDGE POINTER
+# =====================================================================
+# Route START directly to the chunker since views.py already handled text extraction!
+builder.add_edge(START, "chunker")
+builder.add_edge("chunker", "local_store")
+builder.add_edge("local_store", END)
+
+# Compile into a production runnable graph application
+jd_ingestion_pipeline = builder.compile()
