@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useUser, UserButton } from '@clerk/clerk-react';
+import { useUser, UserButton, useAuth } from '@clerk/clerk-react';
 import DashboardLayout from '../components/DashboardLayout';
-import { CheckCircle2, Clock, XCircle, ChevronRight, FileText } from 'lucide-react';
+import { CheckCircle2, Clock, XCircle, ChevronRight, FileText, Trash2, AlertTriangle } from 'lucide-react';
 
 export default function ProfilePage() {
   const { user } = useUser();
   const [applications, setApplications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [revokingId, setRevokingId] = useState(null);
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const { getToken } = useAuth();
 
   // We assume the user's role is stored in backend, but we'll fetch apps based on email
   useEffect(() => {
@@ -32,8 +35,29 @@ export default function ProfilePage() {
     return <Clock className="text-amber-500" size={20} />;
   };
 
+  const handleRevokeClick = (id) => {
+    setRevokingId(id);
+    setShowRevokeModal(true);
+  };
+
+  const confirmRevoke = async () => {
+    try {
+      const token = await getToken();
+      await axios.delete(`http://127.0.0.1:8000/api/revoke-application/${revokingId}/`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setApplications(prev => prev.filter(app => app.id !== revokingId));
+      setShowRevokeModal(false);
+      setRevokingId(null);
+    } catch (err) {
+      console.error("Failed to revoke application:", err);
+      alert("Failed to revoke application. Please try again.");
+    }
+  };
+
   return (
-    <DashboardLayout>
+    <>
+      <DashboardLayout>
       <div className="max-w-4xl mx-auto py-8">
         <h2 className="text-3xl font-bold text-slate-900 mb-8">My Profile</h2>
         
@@ -72,7 +96,8 @@ export default function ProfilePage() {
                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-sm font-bold uppercase tracking-wider">
                   <th className="p-4">Role</th>
                   <th className="p-4">Applied On</th>
-                  <th className="p-4 text-right">Status</th>
+                  <th className="p-4 text-center">Status</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -83,10 +108,18 @@ export default function ProfilePage() {
                       {app.applied_on ? new Date(app.applied_on).toLocaleDateString() : 'N/A'}
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-center gap-2">
                         {getStatusIcon(app.status)}
                         <span className="font-semibold text-slate-700">{app.status}</span>
                       </div>
+                    </td>
+                    <td className="p-4 text-right">
+                      <button 
+                        onClick={() => handleRevokeClick(app.id)}
+                        className="text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-2 rounded-lg transition-colors flex items-center gap-2 ml-auto text-sm font-bold"
+                      >
+                        <Trash2 size={16} /> Revoke
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -96,5 +129,37 @@ export default function ProfilePage() {
         )}
       </div>
     </DashboardLayout>
+      
+      {/* Revoke Confirmation Modal */}
+      {showRevokeModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 animate-in zoom-in-95 duration-200">
+            <div className="flex flex-col items-center text-center mb-6">
+              <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-4">
+                <AlertTriangle size={32} />
+              </div>
+              <h2 className="text-2xl font-bold text-slate-900 mb-2">Revoke Application?</h2>
+              <p className="text-slate-500 text-sm">
+                Are you sure you want to revoke this application? All your data, resume files, and AI screening results will be <strong>permanently erased</strong> from our database. This action cannot be undone.
+              </p>
+            </div>
+            <div className="flex gap-4 w-full">
+              <button 
+                onClick={() => setShowRevokeModal(false)}
+                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmRevoke}
+                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors shadow-sm"
+              >
+                Yes, Revoke
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

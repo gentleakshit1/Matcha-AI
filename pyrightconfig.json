@@ -1,0 +1,10 @@
+{
+  "venvPath": ".",
+  "venv": "env",
+  "pythonVersion": "3.11",
+  "executionEnvironments": [
+    {
+      "root": "."
+    }
+  ]
+}

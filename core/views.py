@@ -1,4 +1,6 @@
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import api_view, parser_classes, authentication_classes, permission_classes
+from .authentication import ClerkJWTAuthentication
+from .permissions import IsHRAdmin
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework import status
@@ -26,20 +28,29 @@ def extract_text_from_pdf(pdf_file):
 
 @api_view(['POST'])
 @parser_classes([MultiPartParser, FormParser])
+@authentication_classes([ClerkJWTAuthentication])
+@permission_classes([IsHRAdmin])
 def upload_jd_view(request):
     title = request.data.get('title')
     uploaded_file = request.FILES.get('file')
+    raw_text_input = request.data.get('raw_text')
     
-    if not title or not uploaded_file:
-        return Response({"error": "Missing title or file parameters"}, status=status.HTTP_400_BAD_REQUEST)
+    if not title:
+        return Response({"error": "Missing title parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    if not uploaded_file and not raw_text_input:
+        return Response({"error": "Must provide either a JD PDF file or raw text."}, status=status.HTTP_400_BAD_REQUEST)
         
     try:
-        print(f"\n--- [Step 1: Extracting text from Job Description PDF] ---")
-        # 1. Extract text from the uploaded PDF using your existing helper function
-        extracted_text = extract_text_from_pdf(uploaded_file)
-        
+        if raw_text_input:
+            extracted_text = raw_text_input
+        else:
+            print(f"\n--- [Step 1: Extracting text from Job Description PDF] ---")
+            # 1. Extract text from the uploaded PDF using your existing helper function
+            extracted_text = extract_text_from_pdf(uploaded_file)
+            
         if not extracted_text:
-            return Response({"error": "Failed to parse text from the uploaded JD PDF document."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Failed to parse text from the uploaded JD PDF document or input."}, status=status.HTTP_400_BAD_REQUEST)
             
         print(f"✓ Extracted {len(extracted_text)} characters from JD stream.")
 
@@ -123,7 +134,8 @@ def upload_resume_view(request):
         candidate_name=candidate_name,
         email=email,
         resume_file=file,           # Django automatically saves this UploadedFile to media/resumes/
-        resume_text=extracted_text  # Saves the string directly to the DB for fast retrieval
+        resume_text=extracted_text,  # Saves the string directly to the DB for fast retrieval
+        status='Evaluating'         # Initial status while AI processes
     )
 
     # Dispatch Celery background task
@@ -157,6 +169,8 @@ def get_all_jds_view(request):
 
 
 @api_view(['GET'])
+@authentication_classes([ClerkJWTAuthentication])
+@permission_classes([IsHRAdmin])
 def get_candidates(request):
     # Fetch jd_id from query params to filter if needed
     jd_id = request.query_params.get('jd_id')
@@ -214,6 +228,8 @@ def get_candidates(request):
     return Response(formatted_data)
 
 @api_view(['POST'])
+@authentication_classes([ClerkJWTAuthentication])
+@permission_classes([IsHRAdmin])
 def update_candidate_status(request):
     """API to update a candidate's Kanban stage/status."""
     candidate_id = request.data.get('candidate_id')
@@ -241,10 +257,18 @@ def sync_user_profile(request):
         return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
         
     try:
-        # Check if user already exists
+        # Check if user exists by clerk_id
         profile = UserProfile.objects.filter(clerk_id=clerk_id).first()
+        
+        # If not, check if they exist by email (in case they recreated their Clerk account)
+        if not profile:
+            profile = UserProfile.objects.filter(email=email).first()
+            if profile:
+                profile.clerk_id = clerk_id
+                profile.save()
+
         is_hr_approved = False
-        if role == 'hr' and email.endswith('@company.com'):
+        if role == 'hr':
             is_hr_approved = True
 
         if not profile:
@@ -256,9 +280,17 @@ def sync_user_profile(request):
             )
         else:
             # Update role if it changed (useful for testing/switching roles)
+            changed = False
             if profile.role != role:
                 profile.role = role
                 profile.is_hr_approved = is_hr_approved
+                changed = True
+            
+            if profile.clerk_id != clerk_id:
+                profile.clerk_id = clerk_id
+                changed = True
+                
+            if changed:
                 profile.save()
             
         return Response({
@@ -297,7 +329,7 @@ def get_my_applications(request):
         if hasattr(candidate, 'evaluation_report'):
             status_text = candidate.status
         else:
-            status_text = "Pending AI Evaluation"
+            status_text = "Under Review"
             
         formatted_data.append({
             "id": candidate.id,
@@ -309,6 +341,8 @@ def get_my_applications(request):
     return Response(formatted_data, status=status.HTTP_200_OK)
 
 @api_view(['DELETE'])
+@authentication_classes([ClerkJWTAuthentication])
+@permission_classes([IsHRAdmin])
 def delete_candidate_view(request, candidate_id):
     """API to delete a candidate and their evaluation report."""
     try:
@@ -329,6 +363,8 @@ def delete_candidate_view(request, candidate_id):
         return Response({"error": "Candidate not found"}, status=status.HTTP_404_NOT_FOUND)
 
 @api_view(['DELETE'])
+@authentication_classes([ClerkJWTAuthentication])
+@permission_classes([IsHRAdmin])
 def delete_jd_view(request, jd_id):
     """API to delete a Job Description. Its related candidates will be cascade deleted."""
     try:
@@ -338,3 +374,70 @@ def delete_jd_view(request, jd_id):
         return Response({"message": "Job Description deleted successfully"}, status=status.HTTP_200_OK)
     except JobDescription.DoesNotExist:
         return Response({"error": "Job Description not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+@authentication_classes([ClerkJWTAuthentication])
+def revoke_application_view(request, candidate_id):
+    """API for a candidate to revoke (delete) their own application."""
+    try:
+        candidate = Candidate.objects.get(id=candidate_id)
+        
+        # Verify the candidate owns this application
+        if candidate.email != request.user.email:
+            return Response({"error": "Unauthorized to revoke this application"}, status=status.HTTP_403_FORBIDDEN)
+            
+        # Purge their specific RAG embeddings from ChromaDB
+        import chromadb
+        import os
+        try:
+            client = chromadb.PersistentClient(path=os.path.join(os.getcwd(), "chroma_storage"))
+            client.delete_collection(f"candidate_resume_{candidate_id}")
+        except Exception as e:
+            print(f"Chroma delete warning: {e}")
+            
+        candidate.delete()
+        return Response({"message": "Application revoked successfully"}, status=status.HTTP_200_OK)
+    except Candidate.DoesNotExist:
+        return Response({"error": "Application not found"}, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PUT'])
+@authentication_classes([ClerkJWTAuthentication])
+@permission_classes([IsHRAdmin])
+def edit_jd_view(request, jd_id):
+    """API to edit a Job Description and re-trigger ingestion."""
+    try:
+        jd = JobDescription.objects.get(id=jd_id)
+        title = request.data.get('title')
+        raw_text = request.data.get('raw_text')
+        
+        if not title or not raw_text:
+            return Response({"error": "Title and raw_text are required"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        jd.title = title
+        jd.raw_text = raw_text
+        jd.save()
+        
+        print(f"--- [Triggering LangGraph RAG Vector Ingestion Pipeline for Edited JD {jd.id}] ---")
+        collection_identifier = f"jd_collection_{jd.id}"
+        
+        graph_inputs = {
+            "file_path": "",
+            "collection_name": collection_identifier,
+            "raw_text": raw_text,
+            "chunks": [],
+            "ingestion_status": ""
+        }
+        
+        # Run the LangGraph execution flow synchronously to update ChromaDB
+        output_state = jd_ingestion_pipeline.invoke(graph_inputs)
+        print(f"✓ Pipeline Finished: {output_state.get('ingestion_status')}\n")
+        
+        return Response({
+            "message": "Job Description updated and successfully re-synced with Knowledge Base."
+        }, status=status.HTTP_200_OK)
+        
+    except JobDescription.DoesNotExist:
+        return Response({"error": "Job Description not found"}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        print(f"Edit JD Error: {str(e)}")
+        return Response({"error": f"Internal error during update: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

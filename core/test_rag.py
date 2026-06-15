@@ -9,7 +9,7 @@ django.setup()
 
 from core.models import JobDescription
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 def run_pipeline_diagnostic():
     print("==================================================")
@@ -42,8 +42,12 @@ def run_pipeline_diagnostic():
     print(f"✓ [DISK]: Verified local 'chroma_storage' folder directory structure is visible.")
 
     # 3. Initialize Local Embeddings Engine & Load the Vector Store
-    print("⚡ Hydrating local Vector DB embedding layers via Ollama...")
-    embeddings_engine = OllamaEmbeddings(model="nomic-embed-text")
+    print("⚡ Hydrating local Vector DB embedding layers via OpenRouter...")
+    embeddings_engine = OpenAIEmbeddings(
+        model="openai/text-embedding-3-small",
+        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+        base_url="https://openrouter.ai/api/v1"
+    )
     collection_identifier = f"jd_collection_{jd_record.id}"
 
     try:

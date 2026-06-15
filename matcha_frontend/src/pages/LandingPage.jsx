@@ -121,19 +121,9 @@ export default function LandingPage() {
             <ChevronRight className="group-hover:translate-x-1 transition-transform" />
           </button>
         ) : (
-          <div className="flex gap-4">
-            <button 
-              onClick={() => handleRouting(role || 'candidate', true)}
-              className="px-8 py-4 font-bold text-white bg-green-600 rounded-full hover:bg-green-700 shadow-lg"
-            >
-              Go to Dashboard
-            </button>
-            <button 
-              onClick={handleSignOut}
-              className="px-8 py-4 font-bold text-slate-700 bg-white border border-slate-200 rounded-full hover:bg-slate-50 shadow-sm"
-            >
-              Sign Out
-            </button>
+          <div className="flex flex-col items-center gap-4 mt-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-green-600"></div>
+            <p className="text-slate-500 font-bold text-lg animate-pulse">Taking you to your workspace...</p>
           </div>
         )}
       </div>

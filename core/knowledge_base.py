@@ -4,7 +4,7 @@ from langgraph.graph import StateGraph, START, END
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
 # =====================================================================
 # 1. STATE DEFINITION MATRIX
@@ -41,14 +41,16 @@ def pdf_extraction_node(state: IngestionState) -> Dict[str, Any]:
 def text_chunking_node(state: IngestionState) -> Dict[str, Any]:
     """
     Node 2: Break massive text blocks into smart overlapping chunks.
+    Optimized with semantic separators to preserve bullet points and resume structure.
     """
     print("\n--- [Node 2: Processing character text splitting...] ---")
     source_text = state["raw_text"]
     
-    # 500 character chunks with 100 character overlaps prevents data gaps at the edges
+    # 1000 character chunks preserve full context blocks better than 500
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=100,
+        chunk_size=1000,
+        chunk_overlap=200,
+        separators=["\n\n", "\n", "•", "-", " ", ""],
         length_function=len
     )
     text_chunks = splitter.create_documents([source_text])
@@ -65,8 +67,12 @@ def local_vector_storage_node(state: IngestionState) -> Dict[str, Any]:
     document_chunks = state["chunks"]
     target_collection = state["collection_name"]
     
-    # Local, free embedding generator running on your qwen3 / nomic background setups
-    embeddings_engine = OllamaEmbeddings(model="nomic-embed-text")
+    # Using OpenAI embeddings through OpenRouter
+    embeddings_engine = OpenAIEmbeddings(
+        model="openai/text-embedding-3-small",
+        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+        base_url="https://openrouter.ai/api/v1"
+    )
     
     # Automatically creates a clean, dedicated storage folder right inside your project root
     persist_directory = os.path.join(os.getcwd(), "chroma_storage")

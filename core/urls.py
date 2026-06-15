@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import webhook_views
 
 urlpatterns = [
     path('upload-jd/', views.upload_jd_view, name='upload_jd'),
@@ -11,5 +12,8 @@ urlpatterns = [
     path('get-user/<str:clerk_id>/', views.get_user_profile, name='get_user_profile'),
     path('get-my-applications/', views.get_my_applications, name='get_my_applications'),
     path('delete-candidate/<int:candidate_id>/', views.delete_candidate_view, name='delete_candidate'),
+    path('revoke-application/<int:candidate_id>/', views.revoke_application_view, name='revoke_application'),
     path('delete-jd/<int:jd_id>/', views.delete_jd_view, name='delete_jd'),
+    path('edit-jd/<int:jd_id>/', views.edit_jd_view, name='edit_jd'),
+    path('clerk-webhook/', webhook_views.clerk_webhook_view, name='clerk_webhook'),
 ]

@@ -1,15 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Briefcase, MapPin, Clock, ChevronDown, ChevronUp, FileText, ChevronRight } from 'lucide-react';
-import { useUser, useClerk } from '@clerk/clerk-react';
+import { Briefcase, MapPin, Clock, ChevronDown, ChevronUp, FileText, ChevronRight, Edit2, X } from 'lucide-react';
+import { useUser, useClerk, useAuth } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function CareersPage() {
   const [availableJobs, setAvailableJobs] = useState([]);
   const [expandedJobId, setExpandedJobId] = useState(null);
+  const [editingJob, setEditingJob] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editRawText, setEditRawText] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   
   const { isSignedIn, user } = useUser();
   const { openSignIn } = useClerk();
+  const { getToken } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,12 +38,44 @@ export default function CareersPage() {
     e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this Job Description and all its candidates?")) {
       try {
-        await axios.delete(`http://127.0.0.1:8000/api/delete-jd/${jobId}/`);
+        const token = await getToken();
+        await axios.delete(`http://127.0.0.1:8000/api/delete-jd/${jobId}/`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setAvailableJobs(prev => prev.filter(j => j.id !== jobId));
       } catch (err) {
         console.error("Failed to delete job:", err);
         alert("Failed to delete the job description.");
       }
+    }
+  };
+
+  const handleEditClick = (job, e) => {
+    e.stopPropagation();
+    setEditingJob(job);
+    setEditTitle(job.title);
+    setEditRawText(job.raw_text || '');
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const token = await getToken();
+      await axios.put(`http://127.0.0.1:8000/api/edit-jd/${editingJob.id}/`, 
+        { title: editTitle, raw_text: editRawText },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      setAvailableJobs(prev => prev.map(j => 
+        j.id === editingJob.id ? { ...j, title: editTitle, raw_text: editRawText } : j
+      ));
+      setEditingJob(null);
+    } catch (err) {
+      console.error("Failed to edit job:", err);
+      alert("Failed to edit job description. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -108,12 +145,20 @@ export default function CareersPage() {
                       </h4>
                       <div className="flex items-center gap-2">
                         {user?.publicMetadata?.role === 'hr' && (
-                          <button 
-                            onClick={(e) => handleDelete(job.id, e)}
-                            className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-600 hover:text-white transition-colors font-bold mr-2"
-                          >
-                            Delete
-                          </button>
+                          <>
+                            <button 
+                              onClick={(e) => handleEditClick(job, e)}
+                              className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-600 hover:text-white transition-colors font-bold mr-2 flex items-center gap-1"
+                            >
+                              <Edit2 size={14} /> Edit
+                            </button>
+                            <button 
+                              onClick={(e) => handleDelete(job.id, e)}
+                              className="text-xs bg-red-50 text-red-600 px-3 py-1.5 rounded-lg border border-red-100 hover:bg-red-600 hover:text-white transition-colors font-bold mr-2"
+                            >
+                              Delete
+                            </button>
+                          </>
                         )}
                         <button 
                           className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
@@ -160,6 +205,62 @@ export default function CareersPage() {
           )}
         </div>
       </main>
+
+      {/* Edit JD Modal */}
+      {editingJob && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl p-8 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Edit Job Description</h2>
+              <button onClick={() => setEditingJob(null)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+            </div>
+            
+            <form onSubmit={handleEditSave} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-semibold mb-1">Job Title</label>
+                <input 
+                  required
+                  className="w-full p-3 border rounded-lg"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold mb-1">Raw Job Description Text</label>
+                <textarea 
+                  required
+                  className="w-full p-3 border rounded-lg h-64 resize-none focus:ring-2 focus:ring-green-500 outline-none text-sm leading-relaxed"
+                  value={editRawText}
+                  onChange={(e) => setEditRawText(e.target.value)}
+                />
+                <p className="text-xs text-slate-500 mt-2">
+                  Saving this will automatically re-train the AI agent with the new description. Existing evaluations will not be re-scored.
+                </p>
+              </div>
+
+              <div className="flex gap-4 w-full mt-4">
+                <button 
+                  type="button"
+                  onClick={() => setEditingJob(null)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors shadow-sm disabled:opacity-50 flex justify-center items-center gap-2"
+                >
+                  {isSaving ? (
+                    <><span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></span> Updating AI Agent...</>
+                  ) : "Save & Sync with AI"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

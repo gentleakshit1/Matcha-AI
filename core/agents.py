@@ -1,9 +1,10 @@
 from typing import TypedDict, Dict, Any, List
 import json
+import os
 from pydantic import BaseModel, Field
 from langgraph.graph import StateGraph, START, END
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 
 # =====================================================================
 # 1. THE STATE DEFINITION
@@ -25,40 +26,41 @@ class MatchaState(TypedDict):
 
 
 # =====================================================================
-# STRUCTURAL OUTPUT SCHEMA FOR BACKUP REFERENCE
+# STRUCTURAL OUTPUT SCHEMAS
 # =====================================================================
 class SkillAnalysisSchema(BaseModel):
     score: int = Field(description="A matching score between 0 and 100 based on overall profile suitability.")
     matching_skills: List[str] = Field(description="Key skills, tools, and platforms present in both the JD and candidate resume.")
     missing_skills: List[str] = Field(description="Critical technical skills or requirements requested in the JD but absent in the resume.")
+    score_explanation: str = Field(description="Detailed explanation of the score.")
+
+class InterviewQuestionsSchema(BaseModel):
+    questions: List[str] = Field(description="List of exactly 3 highly specific technical interview questions.")
 
 
 # =====================================================================
-# 2. THE AGENT NODES (HIGH-SPEED CPU OPTIMIZED)
+# HELPER TO GET LLM
+# =====================================================================
+def get_llm(temperature: float = 0.3):
+    return ChatOpenAI(
+        model="openai/gpt-4o-mini",
+        temperature=temperature,
+        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+        base_url="https://openrouter.ai/api/v1"
+    )
+
+# =====================================================================
+# 2. THE AGENT NODES (OPTIMIZED FOR OPENROUTER / GPT-4O-MINI)
 # =====================================================================
 
 def resume_screening_agent(state: MatchaState) -> Dict[str, Any]:
-    """
-    Agent 1: Responsible for reading raw, parsed resume text data 
-    and synthesizing a structural executive screening dossier.
-    """
-    print("\n--- [Agent 1: Resume Screening Agent is processing (High-Speed Mode)...] ---")
+    print("\n--- [Agent 1: Resume Screening Agent is processing...] ---")
     
     resume = state.get("candidate_resume", "")
     name = state.get("candidate_name", "The Candidate")
     job_title = state.get("job_title", "Target Position")
     
-    # OPTIMIZATION: Removed truncation so the AI reads the full resume
-    safe_resume = resume
-    
-    # OPTIMIZATION: Lighter model, RAM caching, and strict output limits
-    llm = ChatOllama(
-        model="llama3.2:1b",   # Switch to 1B model for massive speed boost on CPU
-        temperature=0.3,
-        keep_alive="1h",       # Keep model awake in RAM to prevent reload lag
-        num_ctx=8192,          # Increased context memory to fit full documents
-        num_predict=150        # Force the model to stop talking quickly
-    )
+    llm = get_llm(temperature=0.3)
     
     screener_prompt = ChatPromptTemplate.from_messages([
         ("system", (
@@ -71,20 +73,16 @@ def resume_screening_agent(state: MatchaState) -> Dict[str, Any]:
     
     try:
         chain = screener_prompt | llm
-        response = chain.invoke({"name": name, "resume": safe_resume})
+        response = chain.invoke({"name": name, "resume": resume})
         generated_summary = response.content.strip()
     except Exception as e:
-        print(f"🔥 Local Agent 1 Invocation Failure: {str(e)}")
+        print(f"🔥 Agent 1 Invocation Failure: {str(e)}")
         generated_summary = f"Profile analysis completed locally for {name}."
 
     return {"screening_summary": generated_summary}
 
 
 def skill_matching_agent(state: MatchaState) -> Dict[str, Any]:
-    """
-    Agent 2: RAG-Augmented Skill Matching Agent.
-    Queries ChromaDB to semantically align Resume vectors with JD vectors.
-    """
     print("\n--- [Agent 2: RAG Skill Matching Agent is processing...] ---")
     
     jd_id = state.get("jd_id")
@@ -93,41 +91,34 @@ def skill_matching_agent(state: MatchaState) -> Dict[str, Any]:
     summary = state.get("screening_summary", "")
     
     from langchain_chroma import Chroma
-    from langchain_ollama import OllamaEmbeddings
-    import os
+    from langchain_openai import OpenAIEmbeddings
     
     persist_directory = os.path.join(os.getcwd(), "chroma_storage")
-    embeddings_engine = OllamaEmbeddings(model="nomic-embed-text")
+    embeddings_engine = OpenAIEmbeddings(
+        model="openai/text-embedding-3-small",
+        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
+        base_url="https://openrouter.ai/api/v1"
+    )
     
     try:
-        # 1. Retrieve Resume Chunks that are most relevant to the Job Title
         resume_vs = Chroma(collection_name=f"candidate_resume_{candidate_id}", embedding_function=embeddings_engine, persist_directory=persist_directory)
         resume_docs = resume_vs.similarity_search(query=job_title + " " + state.get("job_requirements", "")[:500], k=6)
         rag_resume_context = "\n...\n".join([doc.page_content for doc in resume_docs])
         
-        # 2. Retrieve JD Chunks that are most relevant to the Candidate's Resume
         jd_vs = Chroma(collection_name=f"jd_{jd_id}", embedding_function=embeddings_engine, persist_directory=persist_directory)
         jd_docs = jd_vs.similarity_search(query=state.get("candidate_resume", "")[:500], k=6)
         rag_jd_context = "\n...\n".join([doc.page_content for doc in jd_docs])
-        
         print(f"✓ RAG: Successfully retrieved semantic intersections between candidate and JD.")
     except Exception as e:
         print(f"🔥 RAG Retrieval Error: {str(e)}. Falling back to raw text.")
         rag_resume_context = state.get("candidate_resume", "")[:2000]
         rag_jd_context = state.get("job_requirements", "")[:2000]
     
-    # OPTIMIZATION: Match Agent 1's model to utilize the RAM cache instantly
-    llm = ChatOllama(
-        model="llama3.2:1b",
-        temperature=0.2,       # slightly increased to generate a better explanation
-        keep_alive="1h",
-        num_ctx=8192,          # Increased context memory to fit full documents
-        num_predict=350        # added to ensure it finishes the JSON explanation
-    )
+    llm = get_llm(temperature=0.1)
+    structured_llm = llm.with_structured_output(SkillAnalysisSchema)
     
-    # Double curly braces {{ }} tell LangChain to treat this as literal text, not variables!
     matcher_prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an objective corporate technical screening auditor. You strictly follow instructions and output JSON."),
+        ("system", "You are an objective corporate technical screening auditor. You strictly follow instructions and return precise data."),
         ("user", (
             "### RAG SEMANTIC VECTORS TO ANALYZE ###\n"
             "POSITION: {job_title}\n"
@@ -137,89 +128,55 @@ def skill_matching_agent(state: MatchaState) -> Dict[str, Any]:
             "### INSTRUCTIONS ###\n"
             "Evaluate the relevant resume experience against the job requirements and calculate a suitability score between 0 and 100.\n"
             "CRITICAL GRADING RUBRIC:\n"
-            "- 0-20: Completely irrelevant industry or domain (e.g., Software Dev applying for a Medical/Lab role). If the candidate lacks core industry background, the score MUST NOT exceed 20.\n"
+            "- 0-20: Completely irrelevant industry or domain.\n"
             "- 21-50: Same industry, but missing critical core skills.\n"
             "- 51-80: Meets basic requirements, average fit.\n"
             "- 81-100: Perfect or near-perfect match.\n\n"
-            "EXAMPLE MISMATCH: If JD is 'Lab Technician' and Resume is 'Software Developer', the score is 10 because there is zero medical background.\n\n"
-            "Provide a detailed score explanation breaking down what factors led to the cumulative score, ensuring you strictly follow the rubric.\n"
-            "You must return ONLY a raw, unquoted JSON object matching this exact structure, nothing else:\n"
-            "{{\n"
-            "  \"score\": <calculate_actual_score_here>,\n"
-            "  \"score_explanation\": \"<detailed_breakdown_of_the_score_out_of_100>\",\n"
-            "  \"matching_skills\": [\"list\", \"matching\", \"skills\"],\n"
-            "  \"missing_skills\": [\"list\", \"missing\", \"skills\"]\n"
-            "}}\n"
-            "Do not write conversational explanations, text prefaces, or markdown blocks like ```json."
+            "Provide a detailed score explanation and lists of matching and missing skills based on the requirements."
         ))
     ])
     
     try:
-        chain = matcher_prompt | llm
-        # Pass the RAG Augmented variables into the template
-        response = chain.invoke({
+        chain = matcher_prompt | structured_llm
+        parsed_result = chain.invoke({
             "job_title": job_title,
             "requirements": rag_jd_context,
             "summary": summary,
             "resume": rag_resume_context
         })
-        raw_content = response.content.strip()
-        
-        # Clean formatting tags if the local model outputs markdown code fence containers
-        if "```" in raw_content:
-            raw_content = raw_content.split("```")[1]
-            if raw_content.startswith("json"):
-                raw_content = raw_content[4:]
-        
-        parsed_result = json.loads(raw_content.strip())
         
         return {
-            "skill_match_score": int(parsed_result.get("score", 75)),
+            "skill_match_score": parsed_result.score,
             "skill_gap_analysis": {
-                "matching_skills": parsed_result.get("matching_skills", []),
-                "missing_skills": parsed_result.get("missing_skills", []),
-                "score_explanation": parsed_result.get("score_explanation", "No score explanation provided.")
+                "matching_skills": parsed_result.matching_skills,
+                "missing_skills": parsed_result.missing_skills,
+                "score_explanation": parsed_result.score_explanation
             }
         }
     except Exception as e:
-        print(f"🔥 Local Agent 2 Direct Parse Handshake Fallback: {str(e)}")
+        print(f"🔥 Agent 2 Parsing Error: {str(e)}")
         return {
             "skill_match_score": 70,
             "skill_gap_analysis": {
-                "missing_skills": ["Review Requirements Metrics"],
-                "matching_skills": ["Technical Profile Dossier Evaluated Successfully"],
-                "score_explanation": "Failed to generate detailed score analysis due to fallback."
+                "missing_skills": ["Error generating skills"],
+                "matching_skills": ["Evaluation incomplete"],
+                "score_explanation": "Failed to generate detailed analysis."
             }
         }
 
 
-# =====================================================================
-# 3. COMPILING THE GRAPH CONFIGURATION
-# =====================================================================
-
 def interview_question_agent(state: MatchaState) -> Dict[str, Any]:
-    print("\n--- [Agent 3: Interview Question Generator (High-Speed Mode)...] ---")
+    print("\n--- [Agent 3: Interview Question Generator...] ---")
     
     gap_analysis = state.get("skill_gap_analysis", {})
     missing_skills = gap_analysis.get("missing_skills", [])
     job_title = state.get("job_title", "")
     
-    llm = ChatOllama(
-        model="llama3.2:1b",
-        temperature=0.4,
-        keep_alive="1h",
-        num_ctx=8192,
-        num_predict=250
-    )
+    llm = get_llm(temperature=0.4)
+    structured_llm = llm.with_structured_output(InterviewQuestionsSchema)
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", (
-            "You are an expert technical interviewer. Based on the candidate's missing skills, "
-            "generate exactly 3 highly specific technical interview questions to ask them.\n"
-            "Return ONLY a raw JSON array of strings matching this structure:\n"
-            "[\"Question 1?\", \"Question 2?\", \"Question 3?\"]\n"
-            "Do not write conversational explanations or markdown blocks like ```json."
-        )),
+        ("system", "You are an expert technical interviewer. Based on the candidate's missing skills, generate exactly 3 highly specific technical interview questions to ask them."),
         ("user", "Role: {job_title}\nMissing Skills to test: {missing_skills}")
     ])
     
@@ -227,35 +184,19 @@ def interview_question_agent(state: MatchaState) -> Dict[str, Any]:
         if not missing_skills:
             return {"interview_questions": [f"Could you walk me through your experience relevant to a {job_title} role?", "What is your strongest technical skill?"]}
             
-        chain = prompt | llm
-        response = chain.invoke({"job_title": job_title, "missing_skills": ", ".join(missing_skills)})
-        raw_content = response.content.strip()
+        chain = prompt | structured_llm
+        parsed_result = chain.invoke({"job_title": job_title, "missing_skills": ", ".join(missing_skills)})
         
-        if "```" in raw_content:
-            raw_content = raw_content.split("```")[1]
-            if raw_content.startswith("json"):
-                raw_content = raw_content[4:]
-                
-        questions = json.loads(raw_content.strip())
-        if not isinstance(questions, list):
-            questions = [str(questions)]
-            
-        return {"interview_questions": questions[:3]}
+        return {"interview_questions": parsed_result.questions[:3]}
     except Exception as e:
-        print(f"🔥 Local Agent 3 Parsing Error: {str(e)}")
+        print(f"🔥 Agent 3 Parsing Error: {str(e)}")
         return {"interview_questions": ["Can you explain your background?", "What are your core technical strengths?"]}
 
 
 def feedback_agent(state: MatchaState) -> Dict[str, Any]:
     print("\n--- [Agent 4: Feedback Synthesis Agent...] ---")
     
-    llm = ChatOllama(
-        model="llama3.2:1b",
-        temperature=0.3,
-        keep_alive="1h",
-        num_ctx=8192,
-        num_predict=200
-    )
+    llm = get_llm(temperature=0.3)
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", "You are a recruitment assistant."),
@@ -278,7 +219,7 @@ def feedback_agent(state: MatchaState) -> Dict[str, Any]:
         })
         return {"final_feedback": response.content.strip()}
     except Exception as e:
-        print(f"🔥 Local Agent 4 Error: {str(e)}")
+        print(f"🔥 Agent 4 Error: {str(e)}")
         return {"final_feedback": "Candidate profile processed successfully."}
 
 
