@@ -4,7 +4,7 @@ import { useAuth, useUser } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import UploadJDModal from '../components/UploadJDModal';
-import { Users, FileText, CheckCircle2, UploadCloud, X, GripVertical, Trash2 } from 'lucide-react';
+import { Users, FileText, CheckCircle2, UploadCloud, X, GripVertical, Trash2, ShieldCheck } from 'lucide-react';
 import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay, useDroppable } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -29,22 +29,22 @@ function SortableCandidateCard({ candidate, onClick }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`bg-white p-4 rounded-xl border ${isDragging ? 'border-green-500 shadow-md ring-2 ring-green-100' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'} shadow-sm mb-3 group cursor-pointer relative flex gap-3 transition-colors duration-150`}
+      className={`bg-white p-4 rounded-xl border ${isDragging ? 'border-green-500 shadow-soft-lg ring-2 ring-green-100' : 'border-slate-200 hover:border-slate-300 hover:shadow-soft'} shadow-soft mb-3 group cursor-pointer relative flex gap-3 transition-all duration-150`}
       onClick={() => onClick(candidate)}
     >
       <div {...attributes} {...listeners} className="mt-1 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
         <GripVertical className="text-slate-400 hover:text-slate-700" size={18} />
       </div>
-      <div className="flex-grow">
-        <h4 className="font-bold text-slate-900">{candidate.name}</h4>
-        <p className="text-xs text-slate-500 mb-2 truncate" title={candidate.role}>{candidate.role}</p>
+      <div className="flex-grow min-w-0">
+        <h4 className="font-bold text-slate-900 truncate">{candidate.name}</h4>
+        <p className="text-xs text-slate-500 mb-2.5 truncate" title={candidate.role}>{candidate.role}</p>
         {candidate.status === 'Evaluating' ? (
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 flex items-center gap-1 w-fit">
-            <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+          <span className="badge-blue w-fit">
+            <span className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></span>
             Pending
           </span>
         ) : (
-          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${candidate.score >= 70 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'} w-fit block`}>
+          <span className={`badge w-fit ${candidate.score >= 70 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
             AI Score: {candidate.score}
           </span>
         )}
@@ -57,19 +57,24 @@ function DroppableColumn({ column, candidates, setSelectedCandidate }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className={`w-80 flex-shrink-0 bg-slate-100/80 rounded-2xl flex flex-col h-[calc(100vh-200px)] border ${isOver ? 'border-green-400 bg-green-50/30' : 'border-slate-200'} shadow-sm overflow-hidden transition-colors duration-200`}>
-      <div className="p-4 border-b border-slate-200/50 flex justify-between items-center bg-slate-50 shrink-0">
-        <h3 className="font-bold text-slate-700 text-sm tracking-wide">{column.title}</h3>
-        <span className="bg-white border border-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-bold shadow-sm">
+    <div className={`w-80 flex-shrink-0 bg-slate-100/70 rounded-2xl flex flex-col h-[calc(100vh-220px)] border ${isOver ? 'border-green-400 bg-green-50/40' : 'border-slate-200'} shadow-soft overflow-hidden transition-colors duration-200`}>
+      <div className="p-4 border-b border-slate-200/70 flex justify-between items-center bg-white/60 shrink-0">
+        <h3 className="font-extrabold text-slate-700 text-sm tracking-wide">{column.title}</h3>
+        <span className="bg-white border border-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-bold shadow-soft">
           {candidates.length}
         </span>
       </div>
 
-      <div className="p-3 flex-grow overflow-y-auto" ref={setNodeRef}>
+      <div className="p-3 flex-grow overflow-y-auto custom-scrollbar" ref={setNodeRef}>
         <SortableContext items={candidates.map(c => c.id.toString())} strategy={verticalListSortingStrategy}>
           {candidates.map(candidate => (
             <SortableCandidateCard key={candidate.id} candidate={candidate} onClick={setSelectedCandidate} />
           ))}
+          {candidates.length === 0 && (
+            <div className="text-center text-xs text-slate-400 py-8 px-2 border border-dashed border-slate-200 rounded-xl">
+              No candidates here yet
+            </div>
+          )}
         </SortableContext>
       </div>
     </div>
@@ -202,29 +207,34 @@ export default function HRDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto h-full flex flex-col pt-4">
+      <div className="max-w-7xl mx-auto h-full flex flex-col">
 
         {/* HEADER SECTION */}
-        <div className="flex justify-between items-end mb-6 shrink-0">
+        <div className="flex flex-wrap justify-between items-end gap-4 mb-6 shrink-0">
           <div>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight"></h2>
+            <p className="label-eyebrow mb-2">Hiring Pipeline</p>
+            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Candidate Pipeline</h2>
             <p className="text-slate-500 mt-1 text-sm">Manage pipelines and drag-and-drop candidates between stages.</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="bg-green-50 text-green-700 px-4 py-2 rounded-lg text-sm font-bold border border-green-200">
-              Pass Threshold: 85/100
+          <div className="flex items-center gap-3">
+            <div className="badge-green border border-green-200 px-4 py-2 rounded-xl">
+              <ShieldCheck size={15} /> Pass Threshold: 85/100
             </div>
             <button
               onClick={() => setIsModalOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2"
+              className="btn-primary btn-md"
             >
-              <UploadCloud size={20} />
+              <UploadCloud size={18} />
               New JD Pipeline
             </button>
           </div>
         </div>
 
-        {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg font-medium shrink-0 text-sm flex items-center gap-2"><X size={18} className="text-red-500" /> {error}</div>}
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl font-semibold shrink-0 text-sm flex items-center gap-2">
+            <X size={18} className="text-red-500 shrink-0" /> {error}
+          </div>
+        )}
 
         {/* KANBAN BOARD AREA */}
         <div className="flex-grow overflow-x-auto overflow-y-hidden pb-8 custom-scrollbar">
@@ -248,10 +258,10 @@ export default function HRDashboard() {
 
               <DragOverlay>
                 {activeCandidate ? (
-                  <div className="bg-white p-4 rounded-xl border-2 border-green-500 shadow-xl opacity-95 w-80 rotate-2 cursor-grabbing">
+                  <div className="bg-white p-4 rounded-xl border-2 border-green-500 shadow-soft-lg opacity-95 w-80 rotate-2 cursor-grabbing">
                     <h4 className="font-bold text-slate-900">{activeCandidate.name}</h4>
                     <p className="text-xs text-slate-500 mb-2 truncate">{activeCandidate.role}</p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeCandidate.score >= 70 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                    <span className={`badge ${activeCandidate.score >= 70 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
                       AI Score: {activeCandidate.score}
                     </span>
                   </div>
@@ -266,25 +276,30 @@ export default function HRDashboard() {
       <UploadJDModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onRefresh={fetchCandidates} />
 
       {selectedCandidate && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedCandidate(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-8 py-6 border-b flex justify-between items-center bg-slate-50">
-              <div><h2 className="text-2xl font-bold">{selectedCandidate.name}</h2><p className="text-slate-500">{selectedCandidate.role}</p></div>
+        <div className="modal-backdrop" onClick={() => setSelectedCandidate(null)} role="dialog" aria-modal="true">
+          <div className="modal-panel max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="px-8 py-6 border-b border-slate-200 flex justify-between items-center bg-slate-50">
+              <div>
+                <h2 className="text-2xl font-extrabold text-slate-900">{selectedCandidate.name}</h2>
+                <p className="text-slate-500">{selectedCandidate.role}</p>
+              </div>
               <div className="flex items-center gap-3">
-                <button onClick={() => handleDeleteCandidate(selectedCandidate.id)} className="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition-colors" title="Delete Candidate">
+                <button onClick={() => handleDeleteCandidate(selectedCandidate.id)} className="text-red-500 hover:text-white bg-red-50 hover:bg-red-600 p-2 rounded-lg transition-colors" title="Delete Candidate" aria-label="Delete candidate">
                   <Trash2 size={20} />
                 </button>
-                <button onClick={() => setSelectedCandidate(null)} className="text-slate-400 hover:text-slate-800 p-2"><X size={24} /></button>
+                <button onClick={() => setSelectedCandidate(null)} className="text-slate-400 hover:text-slate-800 hover:bg-slate-100 p-2 rounded-lg transition-colors" aria-label="Close">
+                  <X size={24} />
+                </button>
               </div>
             </div>
-            <div className="p-8 overflow-y-auto">
+            <div className="p-8 overflow-y-auto custom-scrollbar">
               <div className="mb-6 flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Current Stage:</span>
-                <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-bold">{selectedCandidate.status}</span>
+                <span className="label-eyebrow text-slate-400">Current Stage:</span>
+                <span className="badge-indigo">{selectedCandidate.status}</span>
               </div>
 
-              <div className="mb-6">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Application Lifecycle</h3>
+              <div className="mb-8">
+                <h3 className="label-eyebrow text-slate-400 mb-3">Application Lifecycle</h3>
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <div className="flex flex-col items-center">
                     <div className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center"><CheckCircle2 size={14} /></div>
@@ -310,20 +325,20 @@ export default function HRDashboard() {
               </div>
 
               {selectedCandidate.status === 'Evaluating' ? (
-                <div className="py-12 flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-slate-100 mb-6">
+                <div className="py-12 flex flex-col items-center justify-center bg-slate-50 rounded-2xl border border-slate-100 mb-6">
                   <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-blue-600 mb-4"></div>
                   <h3 className="font-bold text-slate-700">AI Evaluation in Progress</h3>
                   <p className="text-sm text-slate-500">The agent is currently analyzing the resume...</p>
                 </div>
               ) : (
                 <>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">AI Screening Summary (Score: {selectedCandidate.score}/100)</h3>
-                  <p className="bg-slate-50 p-4 rounded-xl text-slate-700 mb-6">{selectedCandidate.summary}</p>
+                  <h3 className="label-eyebrow text-slate-400 mb-2">AI Screening Summary (Score: {selectedCandidate.score}/100)</h3>
+                  <p className="bg-slate-50 p-4 rounded-xl text-slate-700 mb-6 leading-relaxed">{selectedCandidate.summary}</p>
 
                   {selectedCandidate.feedback && (
                     <>
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">HR Feedback Synthesis</h3>
-                      <p className="bg-indigo-50 p-4 rounded-xl text-indigo-900 mb-6 font-medium">{selectedCandidate.feedback}</p>
+                      <h3 className="label-eyebrow text-slate-400 mb-2">HR Feedback Synthesis</h3>
+                      <p className="bg-indigo-50 p-4 rounded-xl text-indigo-900 mb-6 font-medium leading-relaxed">{selectedCandidate.feedback}</p>
                     </>
                   )}
 
@@ -334,8 +349,10 @@ export default function HRDashboard() {
 
                   {selectedCandidate.questions?.length > 0 && (
                     <div>
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Recommended Interview Questions</h3>
-                      {selectedCandidate.questions.map((q, i) => <div key={i} className="mb-3 p-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm">Q{i + 1}. {q}</div>)}
+                      <h3 className="label-eyebrow text-slate-400 mb-4">Recommended Interview Questions</h3>
+                      {selectedCandidate.questions.map((q, i) => (
+                        <div key={i} className="mb-3 p-3 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 shadow-soft">Q{i + 1}. {q}</div>
+                      ))}
                     </div>
                   )}
                 </>

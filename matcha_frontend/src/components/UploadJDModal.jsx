@@ -22,7 +22,7 @@ export default function UploadJDModal({ isOpen, onClose, onRefresh }) {
     setError(null);
     const formData = new FormData();
     formData.append('title', jdTitle);
-    
+
     if (uploadMethod === 'file') {
       formData.append('file', jdFile);
     } else {
@@ -51,36 +51,39 @@ export default function UploadJDModal({ isOpen, onClose, onRefresh }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-8 animate-in zoom-in-95 duration-200">
+    <div className="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="upload-jd-title">
+      <div className="modal-panel max-w-lg p-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold">New Job Pipeline</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
+          <h2 id="upload-jd-title" className="text-xl font-extrabold text-slate-900">New Job Pipeline</h2>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors" aria-label="Close">
+            <X size={20} />
+          </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
-            <label className="block text-sm font-semibold mb-1">Job Title</label>
-            <input 
+            <label htmlFor="jd-title" className="field-label">Job Title</label>
+            <input
+              id="jd-title"
               required
-              className="w-full p-3 border rounded-lg"
+              className="input-field"
               placeholder="e.g. Senior Backend Engineer"
               value={jdTitle}
               onChange={(e) => setJdTitle(e.target.value)}
             />
           </div>
 
-          <div className="flex bg-slate-100 p-1 rounded-lg mb-2">
-            <button 
+          <div className="flex bg-slate-100 p-1 rounded-xl">
+            <button
               type="button"
-              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${uploadMethod === 'file' ? 'bg-white shadow-sm text-green-700' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${uploadMethod === 'file' ? 'bg-white shadow-soft text-green-700' : 'text-slate-500 hover:text-slate-700'}`}
               onClick={() => setUploadMethod('file')}
             >
               Upload PDF
             </button>
-            <button 
+            <button
               type="button"
-              className={`flex-1 py-2 text-sm font-bold rounded-md transition-all ${uploadMethod === 'text' ? 'bg-white shadow-sm text-green-700' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${uploadMethod === 'text' ? 'bg-white shadow-soft text-green-700' : 'text-slate-500 hover:text-slate-700'}`}
               onClick={() => setUploadMethod('text')}
             >
               Paste Text
@@ -89,17 +92,18 @@ export default function UploadJDModal({ isOpen, onClose, onRefresh }) {
 
           {uploadMethod === 'file' ? (
             <div>
-              <label className="block text-sm font-semibold mb-1">JD Blueprint (PDF)</label>
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 flex flex-col items-center hover:bg-slate-50 cursor-pointer">
-                <UploadCloud className="text-slate-400 mb-2" />
-                <input type="file" accept=".pdf" onChange={(e) => setJdFile(e.target.files[0])} className="text-sm w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
+              <label htmlFor="jd-file" className="field-label">JD Blueprint (PDF)</label>
+              <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center hover:bg-slate-50 hover:border-green-400 transition-colors cursor-pointer">
+                <UploadCloud className="text-slate-400 mb-2" size={28} />
+                <input id="jd-file" type="file" accept=".pdf" onChange={(e) => setJdFile(e.target.files[0])} className="text-sm w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer" />
               </div>
             </div>
           ) : (
             <div>
-              <label className="block text-sm font-semibold mb-1">Raw Job Description Text</label>
-              <textarea 
-                className="w-full p-3 border rounded-lg h-32 resize-none focus:ring-2 focus:ring-green-500 outline-none text-sm"
+              <label htmlFor="jd-raw-text" className="field-label">Raw Job Description Text</label>
+              <textarea
+                id="jd-raw-text"
+                className="input-field h-32 resize-none text-sm"
                 placeholder="Paste the full job description text here..."
                 value={jdRawText}
                 onChange={(e) => setJdRawText(e.target.value)}
@@ -107,11 +111,24 @@ export default function UploadJDModal({ isOpen, onClose, onRefresh }) {
             </div>
           )}
 
-          <button 
+          {error && (
+            <div className="badge-red w-full justify-start py-2.5 px-4 rounded-xl">{error}</div>
+          )}
+
+          <button
             disabled={isUploading || (uploadMethod === 'file' ? !jdFile : !jdRawText)}
-            className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 disabled:opacity-50 mt-2"
+            className="btn-primary btn-md w-full mt-1"
           >
-            {isUploading ? "Provisioning..." : "Create Pipeline"}
+            {success ? (
+              <span className="flex items-center gap-2"><CheckCircle2 size={18} /> Pipeline Created!</span>
+            ) : isUploading ? (
+              <span className="flex items-center gap-2">
+                <span className="animate-spin rounded-full h-4 w-4 border-2 border-white/40 border-t-white"></span>
+                Provisioning...
+              </span>
+            ) : (
+              <span className="flex items-center gap-2"><FileText size={18} /> Create Pipeline</span>
+            )}
           </button>
         </form>
       </div>

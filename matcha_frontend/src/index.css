@@ -1,1 +1,306 @@
+/* ==========================================================================
+   matcha.ai — Premium Design System
+   Modern SaaS aesthetic: Inter typography, Matcha green palette,
+   glassmorphism, fluid motion, and refined spacing.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+
+@theme {
+  /* Typography — Inter, the modern standard for SaaS */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+
+  /* Matcha Color Palette */
+  --color-matcha-50: #f4f9f4;
+  --color-matcha-100: #e3f0e3;
+  --color-matcha-200: #c7e0c8;
+  --color-matcha-300: #9cc89e;
+  --color-matcha-400: #6da870;
+  --color-matcha-500: #4a8a4e;
+  --color-matcha-600: #386e3c;
+  --color-matcha-700: #2e5832;
+  --color-matcha-800: #27462a;
+  --color-matcha-900: #213a24;
+
+  --color-cream-50: #fdfcfa;
+  --color-cream-100: #f9f7f2;
+  --color-cream-200: #f2eee4;
+
+  /* Elevation */
+  --shadow-soft: 0 1px 3px 0 rgba(15, 23, 42, 0.04), 0 8px 24px -6px rgba(15, 23, 42, 0.08);
+  --shadow-soft-lg: 0 8px 24px -8px rgba(15, 23, 42, 0.12), 0 32px 64px -24px rgba(15, 23, 42, 0.18);
+  --shadow-glow-brand: 0 12px 40px -12px rgba(74, 138, 78, 0.5);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+
+  /* Motion */
+  --animate-blob: blob 12s ease-in-out infinite;
+  --animate-blob-slow: blob 18s ease-in-out infinite;
+  --animate-fade-in: fade-in 0.6s ease-out both;
+  --animate-fade-in-up: fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-fade-in-down: fade-in-down 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-zoom-in: zoom-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-slide-up: slide-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-slide-down: slide-down 0.4s ease-out both;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-pulse-soft: pulse-soft 3s ease-in-out infinite;
+
+  @keyframes blob {
+    0%, 100% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(40px, -50px) scale(1.1); }
+    66% { transform: translate(-30px, 30px) scale(0.95); }
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade-in-down {
+    from { opacity: 0; transform: translateY(-16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes zoom-in {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slide-down {
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-12px); }
+  }
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply text-slate-700 bg-cream-50;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight text-slate-900;
+  }
+
+  /* Visible, on-brand focus rings for keyboard users */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  [tabindex]:focus-visible {
+    @apply outline-none ring-2 ring-matcha-400/60 ring-offset-2 ring-offset-white rounded-lg;
+  }
+
+  /* Respect reduced-motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* ---------- Buttons ---------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-300 select-none whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-300 select-none whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none bg-matcha-600 text-white shadow-soft hover:bg-matcha-700 hover:shadow-glow-brand hover:-translate-y-0.5 active:translate-y-0;
+  }
+  .btn-dark {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-300 select-none whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none bg-slate-900 text-white shadow-soft hover:bg-slate-800 hover:shadow-soft-lg hover:-translate-y-0.5 active:translate-y-0;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-300 select-none whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none bg-white/80 text-slate-700 border border-slate-200/80 backdrop-blur-sm hover:border-matcha-300 hover:bg-matcha-50/50 hover:text-matcha-700;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-300 select-none whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none bg-transparent text-slate-500 hover:bg-slate-100/80 hover:text-slate-800;
+  }
+  .btn-danger-soft {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all duration-300 select-none whitespace-nowrap disabled:opacity-50 disabled:pointer-events-none disabled:translate-y-0 disabled:shadow-none bg-red-50 text-red-600 hover:bg-red-500 hover:text-white;
+  }
+  .btn-sm { @apply px-4 py-2 text-xs; }
+  .btn-md { @apply px-6 py-3; }
+  .btn-lg { @apply px-8 py-4 text-base; }
+
+  /* ---------- Surfaces ---------- */
+  .card {
+    @apply bg-white/90 backdrop-blur-xl rounded-2xl border border-white/60 shadow-soft;
+  }
+  .card-interactive {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-soft-lg hover:border-matcha-200/60;
+  }
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass;
+  }
+  .glass-dark {
+    @apply bg-slate-900/60 backdrop-blur-xl border border-white/10 shadow-glass;
+  }
+
+  /* ---------- Forms ---------- */
+  .field-label {
+    @apply block text-sm font-semibold text-slate-700 mb-1.5;
+  }
+  .input-field {
+    @apply w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-matcha-400/30 focus:border-matcha-400 focus:bg-white;
+  }
+  textarea.input-field {
+    @apply leading-relaxed;
+  }
+
+  /* ---------- Labels & badges ---------- */
+  .label-eyebrow {
+    @apply text-xs font-bold uppercase tracking-[0.2em] text-matcha-600;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold leading-none;
+  }
+  .badge-green { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold leading-none bg-matcha-100 text-matcha-700; }
+  .badge-slate { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold leading-none bg-slate-100 text-slate-600; }
+  .badge-blue { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold leading-none bg-blue-50 text-blue-600; }
+  .badge-red { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold leading-none bg-red-50 text-red-600; }
+  .badge-indigo { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold leading-none bg-indigo-50 text-indigo-600; }
+  .badge-amber { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold leading-none bg-amber-50 text-amber-700; }
+
+  /* ---------- Brand gradients ---------- */
+  .brand-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-matcha-500 to-emerald-400;
+  }
+  .brand-gradient-bg {
+    @apply bg-gradient-to-br from-matcha-500 to-emerald-600;
+  }
+  .brand-gradient-subtle {
+    @apply bg-gradient-to-br from-matcha-50 to-emerald-50/50;
+  }
+  .brand-gradient-ring {
+    @apply ring-1 ring-inset ring-white/20;
+  }
+
+  /* ---------- Prose for JD text ---------- */
+  .prose-jd {
+    @apply text-[15px] text-slate-600 leading-relaxed whitespace-pre-wrap;
+  }
+
+  /* ---------- Modal shells ---------- */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-slate-900/40 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in;
+  }
+  .modal-panel {
+    @apply bg-white rounded-3xl shadow-soft-lg w-full animate-zoom-in border border-slate-100;
+  }
+}
+
+@layer utilities {
+  /* Scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 6px;
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 8px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+  }
+
+  /* Animation delays */
+  .animation-delay-200 { animation-delay: 200ms; }
+  .animation-delay-400 { animation-delay: 400ms; }
+  .animation-delay-600 { animation-delay: 600ms; }
+  .animation-delay-800 { animation-delay: 800ms; }
+  .animation-delay-1000 { animation-delay: 1000ms; }
+  .animation-delay-1500 { animation-delay: 1500ms; }
+  .animation-delay-2000 { animation-delay: 2000ms; }
+  .animation-delay-4000 { animation-delay: 4000ms; }
+
+  /* Background patterns */
+  .bg-grid-slate {
+    background-image: linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+  .bg-grid-white {
+    background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .bg-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0) 30%,
+      rgba(255, 255, 255, 0.5) 50%,
+      rgba(255, 255, 255, 0) 70%
+    );
+    background-size: 200% 100%;
+    animation: var(--animate-shimmer);
+  }
+
+  /* Gradient mesh backgrounds */
+  .bg-mesh {
+    background-color: #f4f9f4;
+    background-image:
+      radial-gradient(at 20% 30%, rgba(74, 138, 78, 0.12) 0px, transparent 50%),
+      radial-gradient(at 80% 20%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+      radial-gradient(at 50% 80%, rgba(74, 138, 78, 0.1) 0px, transparent 50%),
+      radial-gradient(at 10% 70%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
+  }
+  .bg-mesh-dark {
+    background-color: #0f172a;
+    background-image:
+      radial-gradient(at 20% 30%, rgba(74, 138, 78, 0.15) 0px, transparent 50%),
+      radial-gradient(at 80% 20%, rgba(16, 185, 129, 0.1) 0px, transparent 50%),
+      radial-gradient(at 50% 80%, rgba(74, 138, 78, 0.12) 0px, transparent 50%);
+  }
+
+  /* Section spacing */
+  .section-padding {
+    @apply py-24 md:py-32 px-4 sm:px-6 lg:px-8;
+  }
+  .container-tight {
+    @apply max-w-7xl mx-auto;
+  }
+  .container-narrow {
+    @apply max-w-4xl mx-auto;
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+}
