@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser, RedirectToSignIn } from '@clerk/clerk-react';
 import { Navigate } from 'react-router-dom';
 import axios from 'axios';
+import { Clock3 } from 'lucide-react';
 
 export default function ProtectedRoute({ children, allowedRoles }) {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -29,7 +30,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-green-600"></div>
-          <p className="text-slate-500 font-medium">Authorizing...</p>
+          <p className="text-slate-500 font-bold">Authorizing...</p>
         </div>
       </div>
     );
@@ -55,12 +56,15 @@ export default function ProtectedRoute({ children, allowedRoles }) {
   if (userRole === 'hr' && !isHrApproved) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md text-center">
-          <h2 className="text-2xl font-bold text-slate-900 mb-4">Pending Validation</h2>
-          <p className="text-slate-600 mb-6">
+        <div className="card max-w-md text-center p-8 animate-fade-in-up">
+          <div className="w-14 h-14 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-5">
+            <Clock3 size={26} />
+          </div>
+          <h2 className="text-2xl font-extrabold text-slate-900 mb-3">Pending Validation</h2>
+          <p className="text-slate-500 mb-6 leading-relaxed">
             Your HR account is pending admin approval. Please wait until your credentials are validated.
           </p>
-          <a href="/" className="text-indigo-600 font-bold hover:underline">Return to Home</a>
+          <a href="/" className="btn-primary btn-md w-full">Return to Home</a>
         </div>
       </div>
     );
