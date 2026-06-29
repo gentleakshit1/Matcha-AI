@@ -140,16 +140,15 @@ export default function LandingPage() {
 
       {/* Auth & Role Selection Modal */}
       {showModal && !isSignedIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-dark/40 backdrop-blur-md p-4">
-          <Card className="w-full max-w-md relative animate-in fade-in zoom-in duration-200">
-            <button 
-              onClick={() => { setShowModal(false); setRole(null); }}
-              className="absolute top-4 right-4 text-muted hover:text-ink z-10 rounded-full p-2 hover:bg-canvas transition-colors"
-            >
-              <X size={20} />
-            </button>
-
-            {!role ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+          {!role ? (
+            <Card className="w-[90vw] max-w-[450px] relative animate-in fade-in zoom-in duration-200">
+              <button 
+                onClick={() => { setShowModal(false); setRole(null); }}
+                className="absolute top-4 right-4 text-muted hover:text-ink z-10 rounded-full p-2 hover:bg-canvas transition-colors"
+              >
+                <X size={20} />
+              </button>
               <div className="p-4">
                 <h2 className="font-display text-3xl text-center text-ink mb-2">Join Matcha</h2>
                 <p className="font-sans text-center text-muted mb-8 text-[15px]">How would you like to use the platform?</p>
@@ -182,29 +181,35 @@ export default function LandingPage() {
                   </button>
                 </div>
               </div>
-            ) : (
-              <div className="p-4 flex justify-center w-full">
-                {authMode === 'signIn' ? (
-                  <div className="w-full">
-                    <SignIn routing="virtual" />
-                    <button onClick={() => setAuthMode('signUp')} className="mt-6 text-[14px] text-ink font-sans font-medium hover:underline w-full text-center">Need an account? Sign Up</button>
-                  </div>
-                ) : (
-                  <div className="w-full">
-                    <SignUp routing="virtual" />
-                    <button onClick={() => setAuthMode('signIn')} className="mt-6 text-[14px] text-ink font-sans font-medium hover:underline w-full text-center">Already have an account? Sign In</button>
-                  </div>
-                )}
-              </div>
-            )}
-          </Card>
+            </Card>
+          ) : (
+            <div className="relative flex flex-col items-center justify-center w-full max-w-md animate-in fade-in zoom-in duration-200">
+              <button 
+                onClick={() => { setShowModal(false); setRole(null); }}
+                className="absolute -top-12 right-0 text-ink bg-canvas hover:bg-canvas-soft z-10 rounded-full p-2 transition-colors shadow-sm"
+              >
+                <X size={20} />
+              </button>
+              {authMode === 'signIn' ? (
+                <div className="flex flex-col items-center w-full">
+                  <SignIn routing="virtual" />
+                  <button onClick={() => setAuthMode('signUp')} className="mt-4 text-[13px] text-white/80 hover:text-white font-sans hover:underline transition-colors">Need an account? Sign Up</button>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center w-full">
+                  <SignUp routing="virtual" />
+                  <button onClick={() => setAuthMode('signIn')} className="mt-4 text-[13px] text-white/80 hover:text-white font-sans hover:underline transition-colors">Already have an account? Sign In</button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
       {/* Role Collection Modal for already signed-in users without a role */}
       {showModal && isSignedIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-surface-dark/40 backdrop-blur-md p-4">
-          <Card className="w-full max-w-md p-8 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
+          <Card className="w-[90vw] max-w-[450px] p-8 relative">
             <h2 className="font-display text-3xl text-center text-ink mb-2">Complete your profile</h2>
             <p className="font-sans text-center text-muted mb-8 text-[15px]">Please select your primary role to continue.</p>
             <div className="space-y-4">
