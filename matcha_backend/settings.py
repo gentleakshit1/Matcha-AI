@@ -31,7 +31,7 @@ SECRET_KEY = 'django-insecure-bb3-5-cjus8b!a1xlp+7gej5+wrqkev)&fri*dh$f-4bs$czax
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']  # In production, restrict to your Heroku domains
-CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.dev', 'https://*.ngrok-free.app', 'https://*.herokuapp.com', 'https://*.vercel.app']
+CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.dev', 'https://*.ngrok-free.app', 'https://*.onrender.com', 'https://*.vercel.app']
 
 
 # Application definition
