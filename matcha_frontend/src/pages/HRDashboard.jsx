@@ -26,7 +26,7 @@ export default function HRDashboard() {
       if (showLoadingIndicator) setIsLoading(true);
       const token = await getToken();
       if (!token) return;
-      const response = await axios.get('http://127.0.0.1:8000/api/get-candidates/', {
+      const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/get-candidates/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = Array.isArray(response.data) ? response.data : response.data.candidates || [];
@@ -79,7 +79,7 @@ export default function HRDashboard() {
 
     try {
       const token = await getToken();
-      await axios.post('http://127.0.0.1:8000/api/update-candidate-status/', {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/update-candidate-status/`, {
         candidate_id: candidateId,
         status: newStatus
       }, {
@@ -96,7 +96,7 @@ export default function HRDashboard() {
     try {
       toast.loading("Generating link and sending email...", { id: 'schedule-toast' });
       const token = await getToken();
-      const response = await axios.post(`http://127.0.0.1:8000/api/interviews/schedule/`, {
+      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/interviews/schedule/`, {
         candidate_id: candidateId
       }, {
         headers: { Authorization: `Bearer ${token}` }
@@ -120,7 +120,7 @@ export default function HRDashboard() {
     if (window.confirm("Are you sure you want to delete this candidate?")) {
       try {
         const token = await getToken();
-        await axios.delete(`http://127.0.0.1:8000/api/delete-candidate/${candidateId}/`, {
+        await axios.delete(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/delete-candidate/${candidateId}/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setCandidates(prev => prev.filter(c => c.id !== candidateId));

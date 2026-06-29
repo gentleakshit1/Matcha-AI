@@ -90,24 +90,39 @@ def skill_matching_agent(state: MatchaState) -> Dict[str, Any]:
     job_title = state.get("job_title", "")
     summary = state.get("screening_summary", "")
     
-    from langchain_chroma import Chroma
+    from langchain_pinecone import PineconeVectorStore
+    from pinecone import Pinecone
     from langchain_openai import OpenAIEmbeddings
     
-    persist_directory = os.path.join(os.getcwd(), "chroma_storage")
     embeddings_engine = OpenAIEmbeddings(
         model="openai/text-embedding-3-small",
         api_key=os.environ.get("OPENROUTER_API_KEY", ""),
         base_url="https://openrouter.ai/api/v1"
     )
     
+    pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
+    index_name = os.environ.get("PINECONE_INDEX_NAME", "matcha-index")
+    
     try:
-        resume_vs = Chroma(collection_name=f"candidate_resume_{candidate_id}", embedding_function=embeddings_engine, persist_directory=persist_directory)
-        resume_docs = resume_vs.similarity_search(query=job_title + " " + state.get("job_requirements", "")[:500], k=6)
-        rag_resume_context = "\n...\n".join([doc.page_content for doc in resume_docs])
-        
-        jd_vs = Chroma(collection_name=f"jd_{jd_id}", embedding_function=embeddings_engine, persist_directory=persist_directory)
-        jd_docs = jd_vs.similarity_search(query=state.get("candidate_resume", "")[:500], k=6)
-        rag_jd_context = "\n...\n".join([doc.page_content for doc in jd_docs])
+        if pinecone_api_key:
+            pc = Pinecone(api_key=pinecone_api_key)
+            resume_vs = PineconeVectorStore(index_name=index_name, embedding=embeddings_engine, namespace=f"candidate_resume_{candidate_id}")
+            resume_docs = resume_vs.similarity_search(query=job_title + " " + state.get("job_requirements", "")[:500], k=6)
+            rag_resume_context = "\n...\n".join([doc.page_content for doc in resume_docs])
+            
+            jd_vs = PineconeVectorStore(index_name=index_name, embedding=embeddings_engine, namespace=f"jd_{jd_id}")
+            jd_docs = jd_vs.similarity_search(query=state.get("candidate_resume", "")[:500], k=6)
+            rag_jd_context = "\n...\n".join([doc.page_content for doc in jd_docs])
+        else:
+            from langchain_chroma import Chroma
+            persist_directory = os.path.join(os.getcwd(), "chroma_storage")
+            resume_vs = Chroma(collection_name=f"candidate_resume_{candidate_id}", embedding_function=embeddings_engine, persist_directory=persist_directory)
+            resume_docs = resume_vs.similarity_search(query=job_title + " " + state.get("job_requirements", "")[:500], k=6)
+            rag_resume_context = "\n...\n".join([doc.page_content for doc in resume_docs])
+            
+            jd_vs = Chroma(collection_name=f"jd_{jd_id}", embedding_function=embeddings_engine, persist_directory=persist_directory)
+            jd_docs = jd_vs.similarity_search(query=state.get("candidate_resume", "")[:500], k=6)
+            rag_jd_context = "\n...\n".join([doc.page_content for doc in jd_docs])
         print(f"✓ RAG: Successfully retrieved semantic intersections between candidate and JD.")
     except Exception as e:
         print(f"🔥 RAG Retrieval Error: {str(e)}. Falling back to raw text.")

@@ -3,7 +3,8 @@ from typing import TypedDict, Dict, Any, List
 from langgraph.graph import StateGraph, START, END
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_chroma import Chroma
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
 from langchain_openai import OpenAIEmbeddings
 
 # =====================================================================
@@ -74,16 +75,26 @@ def local_vector_storage_node(state: IngestionState) -> Dict[str, Any]:
         base_url="https://openrouter.ai/api/v1"
     )
     
-    # Automatically creates a clean, dedicated storage folder right inside your project root
-    persist_directory = os.path.join(os.getcwd(), "chroma_storage")
+    pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
+    index_name = os.environ.get("PINECONE_INDEX_NAME", "matcha-index")
     
-    # Initialize Chroma. It automatically creates the directory, vectorizes text, and saves it.
-    vector_store = Chroma.from_documents(
-        documents=document_chunks,
-        embedding=embeddings_engine,
-        collection_name=target_collection,
-        persist_directory=persist_directory
-    )
+    if pinecone_api_key:
+        pc = Pinecone(api_key=pinecone_api_key)
+        vector_store = PineconeVectorStore.from_documents(
+            documents=document_chunks,
+            embedding=embeddings_engine,
+            index_name=index_name,
+            namespace=target_collection
+        )
+    else:
+        from langchain_chroma import Chroma
+        persist_directory = os.path.join(os.getcwd(), "chroma_storage")
+        vector_store = Chroma.from_documents(
+            documents=document_chunks,
+            embedding=embeddings_engine,
+            collection_name=target_collection,
+            persist_directory=persist_directory
+        )
     
     status_log = f"Successfully synchronized {len(document_chunks)} vector records inside local collection '{target_collection}'."
     print(f"✓ {status_log}")

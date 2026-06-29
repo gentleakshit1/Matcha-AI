@@ -32,7 +32,7 @@ export default function CandidatePortal() {
 
     const fetchJobs = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/get-jds/');
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/get-jds/`);
         setAvailableJobs(response.data);
         
         const intendedJobId = localStorage.getItem('intended_job_id');
@@ -84,7 +84,7 @@ export default function CandidatePortal() {
     formData.append('file', resumeFile);
 
     try {
-      await axios.post('http://127.0.0.1:8000/api/upload-resume/', formData, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/upload-resume/`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setIsSuccess(true);

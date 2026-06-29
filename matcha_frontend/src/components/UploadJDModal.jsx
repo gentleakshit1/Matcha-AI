@@ -33,7 +33,7 @@ export default function UploadJDModal({ isOpen, onClose, onRefresh }) {
 
     try {
       const token = await getToken();
-      await axios.post('http://127.0.0.1:8000/api/upload-jd/', formData, {
+      await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/upload-jd/`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`

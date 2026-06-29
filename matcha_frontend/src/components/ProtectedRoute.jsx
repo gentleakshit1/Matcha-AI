@@ -10,7 +10,7 @@ export default function ProtectedRoute({ children, allowedRoles }) {
 
   useEffect(() => {
     if (isSignedIn && user) {
-      axios.get(`http://127.0.0.1:8000/api/get-user/${user.id}/`)
+      axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/get-user/${user.id}/`)
         .then(res => {
           setBackendProfile(res.data);
           setIsChecking(false);

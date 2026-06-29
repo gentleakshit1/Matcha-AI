@@ -18,7 +18,7 @@ export default function ProfilePage() {
     if (user?.primaryEmailAddress?.emailAddress) {
       const fetchApps = async () => {
         try {
-          const res = await axios.get(`http://127.0.0.1:8000/api/get-my-applications/?email=${encodeURIComponent(user.primaryEmailAddress.emailAddress)}`);
+          const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/get-my-applications/?email=${encodeURIComponent(user.primaryEmailAddress.emailAddress)}`);
           setApplications(res.data);
         } catch (err) {
           console.error("Failed to fetch applications:", err);
@@ -44,7 +44,7 @@ export default function ProfilePage() {
   const confirmRevoke = async () => {
     try {
       const token = await getToken();
-      await axios.delete(`http://127.0.0.1:8000/api/revoke-application/${revokingId}/`, {
+      await axios.delete(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/revoke-application/${revokingId}/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setApplications(prev => prev.filter(app => app.id !== revokingId));

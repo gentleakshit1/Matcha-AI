@@ -23,7 +23,7 @@ export default function InterviewPortal() {
     // Validate the session token with the Backend
     const fetchToken = async () => {
       try {
-        const response = await axios.get(`http://127.0.0.1:8000/api/interviews/get_token/${token}/`);
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/interviews/get_token/${token}/`);
         setSessionData(response.data);
       } catch (err) {
         console.error("Session Error:", err);

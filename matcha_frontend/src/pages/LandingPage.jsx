@@ -31,13 +31,13 @@ export default function LandingPage() {
 
         try {
           // Check backend if user already exists
-          const res = await axios.get(`http://127.0.0.1:8000/api/get-user/${user.id}/`).catch(() => null);
+          const res = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/get-user/${user.id}/`).catch(() => null);
           
           if (res && res.data) {
             // User exists in backend
             // If they have an effective role that differs from backend, sync it
             if (effectiveRole && effectiveRole !== res.data.role) {
-              const syncRes = await axios.post('http://127.0.0.1:8000/api/sync-user/', {
+              const syncRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/sync-user/`, {
                 clerk_id: user.id,
                 email: user.primaryEmailAddress?.emailAddress,
                 role: effectiveRole
@@ -55,7 +55,7 @@ export default function LandingPage() {
             }
 
             // Sync new user with effective role
-            const syncRes = await axios.post('http://127.0.0.1:8000/api/sync-user/', {
+            const syncRes = await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/sync-user/`, {
               clerk_id: user.id,
               email: user.primaryEmailAddress?.emailAddress,
               role: effectiveRole

@@ -25,7 +25,7 @@ export default function CareersPage() {
   useEffect(() => {
     const fetchJobs = async () => {
       try {
-        const response = await axios.get('http://127.0.0.1:8000/api/get-jds/');
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/get-jds/`);
         setAvailableJobs(response.data);
       } catch (err) {
         console.error("Failed to fetch jobs:", err);
@@ -44,7 +44,7 @@ export default function CareersPage() {
     if (window.confirm("Are you sure you want to delete this Job Description and all its candidates?")) {
       try {
         const token = await getToken();
-        await axios.delete(`http://127.0.0.1:8000/api/delete-jd/${jobId}/`, {
+        await axios.delete(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/delete-jd/${jobId}/`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAvailableJobs(prev => prev.filter(j => j.id !== jobId));
@@ -67,7 +67,7 @@ export default function CareersPage() {
     setIsSaving(true);
     try {
       const token = await getToken();
-      await axios.put(`http://127.0.0.1:8000/api/edit-jd/${editingJob.id}/`, 
+      await axios.put(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/edit-jd/${editingJob.id}/`, 
         { title: editTitle, raw_text: editRawText },
         { headers: { Authorization: `Bearer ${token}` } }
       );
