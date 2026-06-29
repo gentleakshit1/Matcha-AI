@@ -9,7 +9,7 @@ langchain-pinecone
 langchain-community
 langchain-openai
 langgraph
-pinecone-client
+pinecone
 python-dotenv
 gunicorn
 whitenoise
