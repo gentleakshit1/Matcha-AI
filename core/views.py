@@ -8,7 +8,7 @@ from pypdf import PdfReader
 from django.core.mail import send_mail
 
 # Import your local database models and the LangGraph multi-agent application
-from .models import JobDescription, Candidate, EvaluationReport, UserProfile
+from .models import JobDescription, Candidate, EvaluationReport, UserProfile, InterviewSession
 from .agents import matcha_agent_app
 from .knowledge_base import jd_ingestion_pipeline
 
@@ -441,3 +441,77 @@ def edit_jd_view(request, jd_id):
     except Exception as e:
         print(f"Edit JD Error: {str(e)}")
         return Response({"error": f"Internal error during update: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+import requests
+import os
+
+@api_view(['POST'])
+@authentication_classes([ClerkJWTAuthentication])
+@permission_classes([IsHRAdmin])
+def schedule_interview_view(request):
+    """API for HR to manually generate an interview session link for a candidate."""
+    candidate_id = request.data.get('candidate_id')
+    if not candidate_id:
+        return Response({"error": "Missing candidate_id"}, status=status.HTTP_400_BAD_REQUEST)
+        
+    try:
+        candidate = Candidate.objects.get(id=candidate_id)
+        # Create a new session or get existing pending session
+        session, created = InterviewSession.objects.get_or_create(
+            candidate=candidate,
+            status='Pending'
+        )
+        # We also need to update the candidate's status to 'Interview' in the Kanban board
+        candidate.status = 'Interview'
+        candidate.save()
+        
+        import os
+        from .tasks import send_interview_email_task
+        
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
+        interview_link = f"{frontend_url}/interview/{session.session_token}"
+        
+        if candidate.email:
+            send_interview_email_task.delay(
+                candidate_email=candidate.email,
+                candidate_name=candidate.candidate_name,
+                interview_link=interview_link,
+                job_title=candidate.job_description.title if candidate.job_description else "the role"
+            )
+        
+        return Response({
+            "message": "Interview scheduled successfully.",
+            "session_token": session.session_token,
+            "interview_link": interview_link
+        }, status=status.HTTP_201_CREATED)
+    except Candidate.DoesNotExist:
+        return Response({"error": "Candidate not found"}, status=status.HTTP_404_NOT_FOUND)
+
+import uuid
+from livekit.api import AccessToken, VideoGrants
+
+@api_view(['GET'])
+def get_openai_ephemeral_token(request, token):
+    """
+    API for the Frontend Browser to securely fetch a LiveKit Token for Beyond Presence AI Avatar.
+    The browser provides the Interview Session token, and we return the LiveKit url and token.
+    """
+    try:
+        # 1. Verify this is a valid interview session
+        session = InterviewSession.objects.get(session_token=token)
+        
+        if session.status == 'Completed':
+            return Response({"error": "This interview has already been completed."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2. Get the Beyond Presence API key and Agent ID securely
+        bp_api_key = os.getenv("BEYOND_PRESENCE_API_KEY")
+        bp_agent_id = os.getenv("BEYOND_PRESENCE_AGENT_ID")
+        
+        # For the Free Tier workaround, we do not call the API programmatically.
+        # We simply return success so the frontend can load the iframe.
+        return Response({
+            "message": "Session validated successfully. Ready to load iframe."
+        }, status=status.HTTP_200_OK)
+            
+    except InterviewSession.DoesNotExist:
+        return Response({"error": "Invalid session token"}, status=status.HTTP_404_NOT_FOUND)

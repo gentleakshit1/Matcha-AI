@@ -1,80 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth, useUser } from '@clerk/clerk-react';
+import { useAuth } from '@clerk/clerk-react';
+import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import UploadJDModal from '../components/UploadJDModal';
-import { Users, FileText, CheckCircle2, UploadCloud, X, GripVertical, Trash2 } from 'lucide-react';
-import { DndContext, closestCorners, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay, useDroppable } from '@dnd-kit/core';
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { UploadCloud, X, Trash2, ChevronRight, CheckCircle2, Copy, FileText } from 'lucide-react';
+import { Button } from '../components/ui/Button';
+import { Card } from '../components/ui/Card';
 
-const COLUMNS = [
-  { id: 'Evaluating', title: 'Evaluating (AI)' },
-  { id: 'Shortlisted', title: 'Shortlisted' },
-  { id: 'Interview', title: 'Interview' },
-  { id: 'Rejected', title: 'Rejected' },
-];
-
-function SortableCandidateCard({ candidate, onClick }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: candidate.id.toString(), data: { candidate } });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`bg-white p-4 rounded-xl border ${isDragging ? 'border-green-500 shadow-md ring-2 ring-green-100' : 'border-slate-200 hover:border-slate-300 hover:shadow-md'} shadow-sm mb-3 group cursor-pointer relative flex gap-3 transition-colors duration-150`}
-      onClick={() => onClick(candidate)}
-    >
-      <div {...attributes} {...listeners} className="mt-1 cursor-grab opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-        <GripVertical className="text-slate-400 hover:text-slate-700" size={18} />
-      </div>
-      <div className="flex-grow">
-        <h4 className="font-bold text-slate-900">{candidate.name}</h4>
-        <p className="text-xs text-slate-500 mb-2 truncate" title={candidate.role}>{candidate.role}</p>
-        {candidate.status === 'Evaluating' ? (
-          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-700 flex items-center gap-1 w-fit">
-            <div className="w-3 h-3 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            Pending
-          </span>
-        ) : (
-          <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${candidate.score >= 70 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'} w-fit block`}>
-            AI Score: {candidate.score}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function DroppableColumn({ column, candidates, setSelectedCandidate }) {
-  const { setNodeRef, isOver } = useDroppable({ id: column.id });
-
-  return (
-    <div className={`w-80 flex-shrink-0 bg-slate-100/80 rounded-2xl flex flex-col h-[calc(100vh-200px)] border ${isOver ? 'border-green-400 bg-green-50/30' : 'border-slate-200'} shadow-sm overflow-hidden transition-colors duration-200`}>
-      <div className="p-4 border-b border-slate-200/50 flex justify-between items-center bg-slate-50 shrink-0">
-        <h3 className="font-bold text-slate-700 text-sm tracking-wide">{column.title}</h3>
-        <span className="bg-white border border-slate-200 text-slate-700 text-xs px-2.5 py-0.5 rounded-full font-bold shadow-sm">
-          {candidates.length}
-        </span>
-      </div>
-
-      <div className="p-3 flex-grow overflow-y-auto" ref={setNodeRef}>
-        <SortableContext items={candidates.map(c => c.id.toString())} strategy={verticalListSortingStrategy}>
-          {candidates.map(candidate => (
-            <SortableCandidateCard key={candidate.id} candidate={candidate} onClick={setSelectedCandidate} />
-          ))}
-        </SortableContext>
-      </div>
-    </div>
-  );
-}
+const STATUS_OPTIONS = ['Evaluating', 'Shortlisted', 'Interview', 'Rejected'];
 
 export default function HRDashboard() {
   const [candidates, setCandidates] = useState([]);
@@ -82,7 +17,7 @@ export default function HRDashboard() {
   const [error, setError] = useState(null);
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeId, setActiveId] = useState(null);
+  const [activeTab, setActiveTab] = useState('All');
   const { getToken, isLoaded } = useAuth();
   const navigate = useNavigate();
 
@@ -90,18 +25,16 @@ export default function HRDashboard() {
     try {
       if (showLoadingIndicator) setIsLoading(true);
       const token = await getToken();
-      if (!token) return; // Wait until token exists
+      if (!token) return;
       const response = await axios.get('http://127.0.0.1:8000/api/get-candidates/', {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = Array.isArray(response.data) ? response.data : response.data.candidates || [];
-      // Assign default status if missing
       const processedData = data.map(c => ({ ...c, status: c.status || 'Applied' }));
       setCandidates(processedData);
       setError(null);
     } catch (err) {
       console.error("Failed to fetch candidates:", err);
-      // Remove the redirect to /candidate so we can see what the actual error is!
       if (err.response && err.response.data && err.response.data.detail) {
         setError(`Access Denied: ${err.response.data.detail}`);
       } else {
@@ -130,42 +63,20 @@ export default function HRDashboard() {
     };
   }, [candidates]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-  );
-
-  const handleDragStart = (event) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragEnd = async (event) => {
-    const { active, over } = event;
-    setActiveId(null);
-
-    if (!over) return;
-
-    const candidateId = parseInt(active.id);
-
-    // Check if over is a column or another card
-    let newStatus = over.id;
-    // If it's a card, over.data.current.sortable.containerId will contain the column id
-    if (over.data?.current?.sortable?.containerId) {
-      newStatus = over.data.current.sortable.containerId;
-    }
-
-    // Ensure the newStatus is a valid column ID
-    if (!COLUMNS.find(c => c.id === newStatus)) {
+  const handleStatusChange = async (candidateId, newStatus) => {
+    if (newStatus === 'Evaluating') {
+      setError("Candidates cannot be moved back to the Evaluating stage.");
       return;
     }
 
     const candidate = candidates.find(c => c.id === candidateId);
     if (!candidate || candidate.status === newStatus) return;
 
-    // Optimistic UI update
     setCandidates(prev => prev.map(c => c.id === candidateId ? { ...c, status: newStatus } : c));
+    if (selectedCandidate?.id === candidateId) {
+      setSelectedCandidate(prev => ({ ...prev, status: newStatus }));
+    }
 
-    // Persist to backend
     try {
       const token = await getToken();
       await axios.post('http://127.0.0.1:8000/api/update-candidate-status/', {
@@ -177,11 +88,35 @@ export default function HRDashboard() {
     } catch (err) {
       console.error("Failed to update status:", err);
       setError("Failed to save candidate status change.");
-      fetchCandidates(); // Revert on failure
+      fetchCandidates(false);
     }
   };
 
-  const handleDeleteCandidate = async (candidateId) => {
+  const handleScheduleInterview = async (candidateId) => {
+    try {
+      toast.loading("Generating link and sending email...", { id: 'schedule-toast' });
+      const token = await getToken();
+      const response = await axios.post(`http://127.0.0.1:8000/api/interviews/schedule/`, {
+        candidate_id: candidateId
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success("Link Generated & Email Sent!", { id: 'schedule-toast' });
+      
+      if (selectedCandidate && selectedCandidate.id === candidateId) {
+        setSelectedCandidate({
+          ...selectedCandidate,
+          generated_link: response.data.interview_link
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to schedule interview. Ensure backend is running.", { id: 'schedule-toast' });
+    }
+  };
+
+  const handleDeleteCandidate = async (candidateId, e) => {
+    if (e) e.stopPropagation();
     if (window.confirm("Are you sure you want to delete this candidate?")) {
       try {
         const token = await getToken();
@@ -189,7 +124,7 @@ export default function HRDashboard() {
           headers: { Authorization: `Bearer ${token}` }
         });
         setCandidates(prev => prev.filter(c => c.id !== candidateId));
-        setSelectedCandidate(null);
+        if (selectedCandidate?.id === candidateId) setSelectedCandidate(null);
       } catch (err) {
         console.error("Failed to delete candidate:", err);
         setError("Failed to delete candidate.");
@@ -197,153 +132,245 @@ export default function HRDashboard() {
     }
   };
 
-  const getCandidatesByStatus = (status) => candidates.filter(c => c.status === status);
-  const activeCandidate = activeId ? candidates.find(c => c.id.toString() === activeId.toString()) : null;
+  const filteredCandidates = activeTab === 'All' 
+    ? candidates 
+    : candidates.filter(c => c.status === activeTab);
 
   return (
     <DashboardLayout>
-      <div className="max-w-7xl mx-auto h-full flex flex-col pt-4">
+      <div className="relative min-h-[calc(100vh-64px)] overflow-hidden flex bg-canvas">
+        {/* Mint Orb Atmospheric Background */}
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-[radial-gradient(circle_at_center,_var(--color-gradient-mint)_0%,_transparent_60%)] opacity-30 mix-blend-multiply filter blur-3xl animate-pulse-slow pointer-events-none translate-x-1/4 -translate-y-1/4 z-0"></div>
 
-        {/* HEADER SECTION */}
-        <div className="flex justify-between items-end mb-6 shrink-0">
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 tracking-tight"></h2>
-            <p className="text-slate-500 mt-1 text-sm">Manage pipelines and drag-and-drop candidates between stages.</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="bg-green-50 text-green-700 px-4 py-2 rounded-lg text-sm font-bold border border-green-200">
-              Pass Threshold: 85/100
-            </div>
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2"
-            >
-              <UploadCloud size={20} />
-              New JD Pipeline
-            </button>
-          </div>
-        </div>
-
-        {error && <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg font-medium shrink-0 text-sm flex items-center gap-2"><X size={18} className="text-red-500" /> {error}</div>}
-
-        {/* KANBAN BOARD AREA */}
-        <div className="flex-grow overflow-x-auto overflow-y-hidden pb-8 custom-scrollbar">
-          {isLoading ? (
-            <div className="text-slate-500 text-center py-20 flex flex-col items-center justify-center gap-4">
-              <span className="animate-spin rounded-full h-8 w-8 border-4 border-slate-300 border-t-green-600"></span>
-              Loading your pipeline data...
-            </div>
-          ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-              <div className="flex gap-5 h-full px-1 min-w-max">
-                {COLUMNS.map((column) => (
-                  <DroppableColumn
-                    key={column.id}
-                    column={column}
-                    candidates={getCandidatesByStatus(column.id)}
-                    setSelectedCandidate={setSelectedCandidate}
-                  />
-                ))}
+        {/* Master-Detail Split Container */}
+        <div className="flex w-full h-[calc(100vh-64px)] relative z-10 pt-[48px]">
+          
+          {/* LEFT COLUMN: Candidate List */}
+          <div className="w-[450px] shrink-0 border-r border-hairline flex flex-col h-full bg-canvas shadow-[10px_0_15px_-3px_rgba(0,0,0,0.1)] z-10">
+            {/* Header & Filters */}
+            <div className="px-6 pb-6 pt-2 shrink-0">
+              <div className="flex justify-between items-center mb-6">
+                 <div>
+                   <h2 className="font-display text-[32px] font-light tracking-tight text-ink leading-none">Candidates</h2>
+                 </div>
+                 <Button onClick={() => setIsModalOpen(true)} className="px-3 py-2 h-auto text-[13px]">
+                   <UploadCloud size={16} className="mr-1.5" />
+                   New JD
+                 </Button>
               </div>
 
-              <DragOverlay>
-                {activeCandidate ? (
-                  <div className="bg-white p-4 rounded-xl border-2 border-green-500 shadow-xl opacity-95 w-80 rotate-2 cursor-grabbing">
-                    <h4 className="font-bold text-slate-900">{activeCandidate.name}</h4>
-                    <p className="text-xs text-slate-500 mb-2 truncate">{activeCandidate.role}</p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${activeCandidate.score >= 70 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
-                      AI Score: {activeCandidate.score}
+              {error && <div className="mb-4 p-3 bg-canvas-soft border border-hairline-strong text-ink rounded-lg font-medium text-[13px] flex items-center gap-2"><X size={16} className="text-muted shrink-0" /> {error}</div>}
+
+              {/* TAB FILTERS */}
+              <div className="flex flex-wrap gap-2">
+                {['All', ...STATUS_OPTIONS].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-1.5 rounded-full text-[13px] font-medium transition-colors border ${activeTab === tab ? 'bg-ink text-canvas border-ink shadow-md' : 'text-body bg-canvas-soft border-hairline hover:border-hairline-strong'}`}
+                  >
+                    {tab}
+                    <span className={`ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full ${activeTab === tab ? 'bg-canvas/20' : 'bg-surface-card border border-hairline'}`}>
+                      {tab === 'All' ? candidates.length : candidates.filter(c => c.status === tab).length}
                     </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Candidate Cards List */}
+            <div className="flex-1 overflow-y-auto px-4 pb-6 space-y-2 relative">
+              {isLoading ? (
+                <div className="text-muted text-center py-10 flex flex-col items-center justify-center gap-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border border-ink border-t-transparent"></div>
+                  <span className="text-[13px]">Loading candidates...</span>
+                </div>
+              ) : filteredCandidates.length === 0 ? (
+                <div className="p-8 text-center text-muted text-[13px] bg-canvas-soft rounded-xl border border-hairline mx-2">
+                  No candidates found in this stage.
+                </div>
+              ) : (
+                filteredCandidates.map((candidate) => (
+                  <div
+                    key={candidate.id}
+                    onClick={() => setSelectedCandidate(candidate)}
+                    className={`p-4 rounded-xl cursor-pointer transition-all border ${selectedCandidate?.id === candidate.id ? 'bg-canvas-soft border-ink shadow-md scale-[1.01]' : 'bg-surface-card border-hairline hover:border-hairline-strong hover:bg-canvas'}`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <h4 className="font-bold text-[15px] font-sans text-ink leading-tight pr-2">{candidate.name}</h4>
+                      {candidate.status === 'Evaluating' ? (
+                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-muted uppercase tracking-wider shrink-0 bg-canvas px-2 py-0.5 rounded-full border border-hairline">
+                          <div className="w-2.5 h-2.5 border border-muted border-t-transparent rounded-full animate-spin"></div>
+                          Evaluating
+                        </span>
+                      ) : (
+                        <span className={`inline-block px-2 py-0.5 rounded-full text-[12px] font-bold tracking-wide border shrink-0 ${candidate.score >= 70 ? 'bg-canvas text-ink border-ink shadow-sm' : 'bg-canvas-soft text-muted border-hairline'}`}>
+                          {candidate.score}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[13px] text-body line-clamp-1 mb-3">{candidate.role}</p>
+                    <div className="flex items-center justify-between">
+                       <span className="text-[11px] font-bold text-ink/70 uppercase tracking-wider bg-canvas border border-hairline px-2 py-0.5 rounded-md">
+                         {candidate.status}
+                       </span>
+                       <button 
+                          onClick={(e) => handleDeleteCandidate(candidate.id, e)} 
+                          className="text-muted hover:text-red-500 transition-colors p-1.5 rounded-md hover:bg-red-500/10"
+                          title="Delete Candidate"
+                       >
+                          <Trash2 size={14} />
+                       </button>
+                    </div>
                   </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-          )}
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Candidate Detail Profile */}
+          <div className="flex-1 flex flex-col h-full overflow-y-auto bg-canvas-soft/30">
+            {!selectedCandidate ? (
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted">
+                <div className="w-24 h-24 bg-canvas border border-hairline rounded-full flex items-center justify-center mb-6 shadow-sm">
+                  <FileText className="w-10 h-10 text-muted/50" />
+                </div>
+                <h3 className="font-display text-[24px] text-ink mb-2">Select a Candidate</h3>
+                <p className="font-sans text-[14px]">Click on a candidate card from the left panel to view their detailed profile.</p>
+              </div>
+            ) : (
+              <div className="max-w-[800px] w-full mx-auto px-10 py-10 pb-24">
+                {/* Profile Header */}
+                <div className="flex justify-between items-start mb-8 pb-6 border-b border-hairline">
+                  <div>
+                    <h2 className="font-display text-[36px] text-ink break-words line-clamp-2 leading-tight mb-2">{selectedCandidate.name}</h2>
+                    <p className="font-sans text-[16px] text-body">{selectedCandidate.role}</p>
+                  </div>
+                  
+                  <div className="flex flex-col items-end gap-3 shrink-0 ml-6">
+                    {selectedCandidate.status !== 'Evaluating' && (
+                      <div className="flex flex-col items-end">
+                        <span className="text-[11px] font-bold text-muted uppercase tracking-wider mb-1">AI Match Score</span>
+                        <span className={`px-4 py-1.5 rounded-lg text-[24px] font-bold border shadow-sm ${selectedCandidate.score >= 70 ? 'bg-canvas text-ink border-ink' : 'bg-surface-card text-muted border-hairline'}`}>
+                          {selectedCandidate.score}/100
+                        </span>
+                      </div>
+                    )}
+                    <div className="mt-2 text-right">
+                       <span className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1">Pipeline Stage</span>
+                       <select 
+                          value={selectedCandidate.status} 
+                          onChange={(e) => handleStatusChange(selectedCandidate.id, e.target.value)}
+                          disabled={selectedCandidate.status === 'Evaluating'}
+                          className="bg-canvas border border-ink text-ink text-[14px] font-bold rounded-lg px-4 py-2 focus:outline-none shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed appearance-none pr-8 relative"
+                        >
+                          {STATUS_OPTIONS.map(status => (
+                            <option key={status} value={status} disabled={status === 'Evaluating' && selectedCandidate.status !== 'Evaluating'}>{status}</option>
+                          ))}
+                        </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profile Body */}
+                <div className="space-y-8">
+                  {selectedCandidate.status === 'Evaluating' ? (
+                    <div className="py-20 flex flex-col items-center justify-center bg-surface-card rounded-2xl border border-hairline shadow-sm text-center px-6">
+                      <div className="animate-spin rounded-full h-10 w-10 border-2 border-ink border-t-transparent mb-6"></div>
+                      <h3 className="font-sans font-medium text-ink text-[18px]">AI Evaluation in Progress</h3>
+                      <p className="text-[14px] text-muted mt-2 max-w-sm">The agent is currently deeply analyzing the resume, extracting skills, and generating a tailored interview strategy...</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* AI Summary */}
+                      <section>
+                        <h3 className="text-[12px] font-bold text-muted uppercase tracking-[0.96px] mb-3 flex items-center gap-2"><CheckCircle2 size={16} className="text-ink" /> AI Screening Summary</h3>
+                        <div className="bg-surface-card border border-hairline p-6 rounded-2xl shadow-sm text-ink leading-relaxed text-[15px]">
+                          {selectedCandidate.summary}
+                        </div>
+                      </section>
+
+                      {/* HR Feedback */}
+                      {selectedCandidate.feedback && (
+                        <section>
+                          <h3 className="text-[12px] font-bold text-muted uppercase tracking-[0.96px] mb-3">HR Feedback Synthesis</h3>
+                          <div className="bg-canvas border-l-4 border-l-ink border border-hairline p-5 rounded-2xl shadow-sm text-ink leading-relaxed text-[15px] font-medium">
+                            {selectedCandidate.feedback}
+                          </div>
+                        </section>
+                      )}
+
+                      {/* Skills Layout */}
+                      <div className="grid grid-cols-2 gap-6">
+                        <section className="bg-surface-card border border-hairline p-5 rounded-2xl shadow-sm">
+                          <h4 className="text-[12px] font-bold text-muted uppercase tracking-[0.96px] mb-3 text-ink">Matched Skills</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedCandidate.matching_skills?.length > 0 ? (
+                               selectedCandidate.matching_skills.map((skill, idx) => (
+                                 <span key={idx} className="bg-canvas border border-hairline text-[13px] font-medium px-2.5 py-1 rounded-md text-ink shadow-sm">{skill}</span>
+                               ))
+                            ) : <span className="text-[14px] text-body">None identified</span>}
+                          </div>
+                        </section>
+                        <section className="bg-surface-card border border-hairline p-5 rounded-2xl shadow-sm">
+                          <h4 className="text-[12px] font-bold text-muted uppercase tracking-[0.96px] mb-3 text-body">Missing Skills</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedCandidate.missing_skills?.length > 0 ? (
+                               selectedCandidate.missing_skills.map((skill, idx) => (
+                                 <span key={idx} className="bg-canvas-soft border border-hairline text-[13px] px-2.5 py-1 rounded-md text-muted">{skill}</span>
+                               ))
+                            ) : <span className="text-[14px] text-body">None identified</span>}
+                          </div>
+                        </section>
+                      </div>
+
+                      {/* Recommended Questions */}
+                      {selectedCandidate.questions?.length > 0 && (
+                        <section>
+                          <h3 className="text-[12px] font-bold text-muted uppercase tracking-[0.96px] mb-4">Recommended Interview Questions</h3>
+                          <div className="space-y-3">
+                            {selectedCandidate.questions.map((q, i) => (
+                              <div key={i} className="p-4 bg-surface-card border border-hairline rounded-xl text-[14px] text-ink shadow-sm leading-relaxed flex gap-3">
+                                <span className="font-bold text-ink/50 mt-0.5">Q{i + 1}</span> 
+                                <span>{q}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </section>
+                      )}
+
+                      {/* Scheduling Action */}
+                      {selectedCandidate.status === 'Interview' && (
+                        <section className="pt-6 mt-6 border-t border-hairline">
+                          {selectedCandidate.generated_link ? (
+                            <div className="bg-canvas-soft border border-emerald-500/20 p-5 rounded-2xl shadow-sm">
+                              <h4 className="text-[13px] font-bold text-emerald-600 uppercase tracking-[0.96px] mb-3 flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span> Link Generated!</h4>
+                              <div className="flex flex-col gap-3 mt-2">
+                                 <input type="text" readOnly value={selectedCandidate.generated_link} className="w-full bg-canvas border border-hairline text-[14px] p-3 rounded-lg text-ink outline-none shadow-inner" />
+                                 <Button onClick={() => { navigator.clipboard.writeText(selectedCandidate.generated_link); toast.success('Copied to clipboard!') }} className="w-full py-3 bg-ink text-canvas hover:bg-gray-800 transition-colors rounded-lg font-bold">Copy Link to Clipboard</Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button 
+                              onClick={() => handleScheduleInterview(selectedCandidate.id)}
+                              className="w-full py-4 text-[15px] bg-[#292524] text-white hover:bg-[#0c0a09] transition-all transform hover:scale-[1.01] shadow-lg rounded-xl font-bold flex items-center justify-center gap-2"
+                            >
+                              Generate AI Interview Link
+                            </Button>
+                          )}
+                        </section>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* MODALS */}
       <UploadJDModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onRefresh={fetchCandidates} />
-
-      {selectedCandidate && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedCandidate(null)}>
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="px-8 py-6 border-b flex justify-between items-center bg-slate-50">
-              <div><h2 className="text-2xl font-bold">{selectedCandidate.name}</h2><p className="text-slate-500">{selectedCandidate.role}</p></div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => handleDeleteCandidate(selectedCandidate.id)} className="text-red-500 hover:text-red-700 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition-colors" title="Delete Candidate">
-                  <Trash2 size={20} />
-                </button>
-                <button onClick={() => setSelectedCandidate(null)} className="text-slate-400 hover:text-slate-800 p-2"><X size={24} /></button>
-              </div>
-            </div>
-            <div className="p-8 overflow-y-auto">
-              <div className="mb-6 flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Current Stage:</span>
-                <span className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-bold">{selectedCandidate.status}</span>
-              </div>
-
-              <div className="mb-6">
-                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Application Lifecycle</h3>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <div className="flex flex-col items-center">
-                    <div className="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center"><CheckCircle2 size={14} /></div>
-                    <span className="text-xs mt-1 text-slate-500">Evaluating</span>
-                  </div>
-                  <div className="w-12 h-0.5 bg-green-200 -mt-4"></div>
-                  <div className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${selectedCandidate.status === 'Evaluating' ? 'bg-slate-200 text-slate-400' : 'bg-green-500 text-white'}`}>
-                      {selectedCandidate.status === 'Evaluating' ? <CheckCircle2 size={14} /> : <CheckCircle2 size={14} />}
-                    </div>
-                    <span className={`text-xs mt-1 ${selectedCandidate.status === 'Evaluating' ? 'text-slate-400' : 'text-slate-500'}`}>Shortlisted</span>
-                  </div>
-                  <div className="w-12 h-0.5 bg-slate-200 -mt-4"></div>
-                  <div className="flex flex-col items-center">
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${selectedCandidate.status === 'Rejected' ? 'bg-red-500 text-white' : ['Evaluating', 'Shortlisted'].includes(selectedCandidate.status) ? 'bg-slate-200 text-slate-400' : 'bg-green-500 text-white'}`}>
-                      {selectedCandidate.status === 'Rejected' ? <X size={14} /> : <CheckCircle2 size={14} />}
-                    </div>
-                    <span className={`text-xs mt-1 ${selectedCandidate.status === 'Rejected' ? 'text-red-500' : 'text-slate-500'}`}>
-                      {selectedCandidate.status === 'Rejected' ? 'Rejected' : ['Evaluating', 'Shortlisted'].includes(selectedCandidate.status) ? 'Pending' : 'Interview'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {selectedCandidate.status === 'Evaluating' ? (
-                <div className="py-12 flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-slate-100 mb-6">
-                  <div className="animate-spin rounded-full h-10 w-10 border-4 border-slate-200 border-t-blue-600 mb-4"></div>
-                  <h3 className="font-bold text-slate-700">AI Evaluation in Progress</h3>
-                  <p className="text-sm text-slate-500">The agent is currently analyzing the resume...</p>
-                </div>
-              ) : (
-                <>
-                  <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">AI Screening Summary (Score: {selectedCandidate.score}/100)</h3>
-                  <p className="bg-slate-50 p-4 rounded-xl text-slate-700 mb-6">{selectedCandidate.summary}</p>
-
-                  {selectedCandidate.feedback && (
-                    <>
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">HR Feedback Synthesis</h3>
-                      <p className="bg-indigo-50 p-4 rounded-xl text-indigo-900 mb-6 font-medium">{selectedCandidate.feedback}</p>
-                    </>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-emerald-50 p-4 rounded-xl text-emerald-800 text-sm font-medium">✓ Matched: {selectedCandidate.matching_skills?.join(', ')}</div>
-                    <div className="bg-red-50 p-4 rounded-xl text-red-800 text-sm font-medium">✗ Missing: {selectedCandidate.missing_skills?.join(', ')}</div>
-                  </div>
-
-                  {selectedCandidate.questions?.length > 0 && (
-                    <div>
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Recommended Interview Questions</h3>
-                      {selectedCandidate.questions.map((q, i) => <div key={i} className="mb-3 p-3 bg-white border border-slate-200 rounded-lg text-sm text-slate-700 shadow-sm">Q{i + 1}. {q}</div>)}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 }

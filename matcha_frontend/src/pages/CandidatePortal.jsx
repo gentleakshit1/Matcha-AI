@@ -1,28 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Briefcase, MapPin, Clock, UploadCloud, CheckCircle2, ChevronRight, ChevronDown, ChevronUp, FileText, AlertCircle } from 'lucide-react';
+import { Briefcase, MapPin, Clock, UploadCloud, CheckCircle2, ChevronRight, ChevronDown, ChevronUp, FileText, AlertCircle, X } from 'lucide-react';
 import { useUser, UserButton } from '@clerk/clerk-react';
 import { useNavigate } from 'react-router-dom';
+import { TopNav } from '../components/TopNav';
+import { Footer } from '../components/Footer';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
 
 export default function CandidatePortal() {
   const { user } = useUser();
   const navigate = useNavigate();
   const [availableJobs, setAvailableJobs] = useState([]);
-  const [selectedJob, setSelectedJob] = useState(null); // Now storing the full job object
+  const [selectedJob, setSelectedJob] = useState(null);
   const [expandedJobId, setExpandedJobId] = useState(null);
   
-  // Form State - Auto populated by Clerk
   const [candidateName, setCandidateName] = useState('');
   const [candidateEmail, setCandidateEmail] = useState('');
   const [resumeFile, setResumeFile] = useState(null);
   
-  // UI State
   const [dragActive, setDragActive] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState(null);
 
-  // 1. FETCH REAL OPEN JOBS ON LOAD AND HYDRATE USER
   useEffect(() => {
     if (user) {
       setCandidateName(user.fullName || '');
@@ -34,7 +35,6 @@ export default function CandidatePortal() {
         const response = await axios.get('http://127.0.0.1:8000/api/get-jds/');
         setAvailableJobs(response.data);
         
-        // Check for intended job from Careers Page
         const intendedJobId = localStorage.getItem('intended_job_id');
         if (intendedJobId) {
           const matchedJob = response.data.find(j => j.id.toString() === intendedJobId);
@@ -42,7 +42,7 @@ export default function CandidatePortal() {
             setSelectedJob(matchedJob);
             setExpandedJobId(matchedJob.id);
           }
-          localStorage.removeItem('intended_job_id'); // clear it
+          localStorage.removeItem('intended_job_id');
         }
       } catch (err) {
         console.error("Failed to fetch jobs:", err);
@@ -67,7 +67,6 @@ export default function CandidatePortal() {
     }
   };
 
-  // 2. SUBMIT TO DJANGO BACKEND
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!resumeFile || !selectedJob || !candidateName || !candidateEmail) {
@@ -85,7 +84,6 @@ export default function CandidatePortal() {
     formData.append('file', resumeFile);
 
     try {
-      // Hits your Django view and triggers the LangGraph agents
       await axios.post('http://127.0.0.1:8000/api/upload-resume/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
@@ -109,7 +107,7 @@ export default function CandidatePortal() {
 
   const handleJobSelect = (job) => {
     setSelectedJob(job);
-    setExpandedJobId(job.id); // Auto-expand when selected
+    setExpandedJobId(job.id);
   };
 
   const toggleJobExpand = (jobId, e) => {
@@ -118,256 +116,214 @@ export default function CandidatePortal() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 font-sans text-slate-900">
-      
-      {/* PREMIUM HEADER */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 h-16 flex items-center justify-between px-8 sticky top-0 z-50 shadow-sm">
-        <h1 className="text-xl font-bold tracking-tight flex items-center gap-2 cursor-pointer" onClick={() => navigate('/careers')}>
-          <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center text-white shadow-inner">
-            💡
-          </div>
-          <span className="text-slate-900">matcha.ai</span> 
-          <span className="text-slate-300 font-normal mx-1">|</span>
-          <span className="text-slate-500 font-medium">Careers</span>
-        </h1>
-        <div className="flex items-center gap-4">
-           <div className="text-right hidden sm:block">
-             <p className="text-sm font-bold text-slate-900 leading-tight">
-               {user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Candidate'}
-             </p>
-           </div>
-           <UserButton userProfileUrl="/profile" />
-        </div>
-      </header>
+    <div className="min-h-screen bg-canvas flex flex-col font-sans text-ink">
+      <TopNav />
 
       {/* HERO SECTION */}
-      <div className="bg-slate-900 text-white py-20 px-8 text-center relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-green-500/10 to-transparent pointer-events-none"></div>
-        <h2 className="text-5xl font-extrabold mb-6 tracking-tight">Find Your Next Big Opportunity</h2>
-        <p className="text-slate-300 max-w-2xl mx-auto text-xl leading-relaxed">
+      <div className="bg-canvas py-[96px] px-6 text-center relative overflow-hidden border-b border-hairline-soft">
+        <div className="absolute top-1/2 left-1/2 w-[600px] h-[600px] bg-[radial-gradient(circle_at_center,_var(--color-gradient-sky)_0%,_transparent_60%)] opacity-40 mix-blend-multiply filter blur-3xl animate-pulse-slow pointer-events-none -translate-x-1/2 -translate-y-1/2"></div>
+        
+        <h2 className="font-display text-[48px] md:text-[64px] font-light tracking-tight mb-4 relative z-10 text-ink">
+          Candidate Portal
+        </h2>
+        <p className="text-body max-w-2xl mx-auto text-[16px] leading-[1.5] relative z-10">
           Upload your profile once. Let our AI instantly match your skills to the perfect role and fast-track your interview.
         </p>
       </div>
 
-      <main className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-1 lg:grid-cols-12 gap-8 relative">
+      <main className="max-w-[1200px] mx-auto w-full px-6 py-[64px] flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        {/* LEFT COLUMN: JOB BOARD (SCROLLABLE) */}
+        {/* LEFT COLUMN: JOB BOARD */}
         <div className="lg:col-span-7">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-2xl font-bold flex items-center gap-3 text-slate-800">
-              <div className="p-2 bg-green-100 rounded-lg text-green-700">
-                <Briefcase size={24} />
-              </div>
+          <div className="flex items-center justify-between mb-6 border-b border-hairline pb-4">
+            <h3 className="text-[20px] font-medium font-sans text-ink flex items-center gap-2">
+              <Briefcase size={20} className="text-muted" />
               Open Positions
             </h3>
-            <span className="text-sm font-medium text-slate-500 bg-slate-200 px-3 py-1 rounded-full">
+            <span className="text-[13px] font-bold tracking-[0.96px] uppercase text-muted">
               {availableJobs.length} Roles
             </span>
           </div>
           
-          <div className="flex flex-col gap-5 pb-12">
+          <div className="flex flex-col gap-4 pb-12">
             {availableJobs.length === 0 ? (
-              <div className="p-12 text-center text-slate-500 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center">
-                <Briefcase size={48} className="text-slate-300 mb-4" />
-                <p className="text-lg">No open positions available at the moment.</p>
-              </div>
+              <Card className="text-center py-12 transition-opacity duration-500">
+                <Briefcase size={40} className="text-muted-soft mx-auto mb-4" />
+                <p className="text-[16px] text-body">No open positions available at the moment.</p>
+              </Card>
             ) : (
-              availableJobs.map((job) => {
+              availableJobs.map((job, index) => {
                 const isSelected = selectedJob?.id === job.id;
                 const isExpanded = expandedJobId === job.id;
                 
                 return (
-                  <div 
+                  <Card 
                     key={job.id} 
                     onClick={() => handleJobSelect(job)}
-                    tabIndex={0}
-                    role="button"
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleJobSelect(job); }}
-                    className={`bg-white rounded-2xl border transition-all cursor-pointer overflow-hidden group
-                      ${isSelected ? 'border-green-500 ring-2 ring-green-500/20 shadow-md' : 'border-slate-200 hover:border-green-300 hover:shadow-lg hover:-translate-y-1'}`}
+                    style={{ animationDelay: `${index * 100}ms` }}
+                    className={`cursor-pointer transition-all duration-300 p-0 overflow-hidden group hover:-translate-y-1 ${isSelected ? 'border-ink ring-1 ring-ink shadow-md scale-[1.01]' : 'hover:border-hairline-strong hover:shadow-md'}`}
                   >
-                    <div className={`p-6 ${isSelected ? 'bg-green-50/30' : 'bg-white'}`}>
+                    <div className={`p-[24px] transition-colors duration-300 ${isSelected ? 'bg-canvas-soft' : 'bg-canvas group-hover:bg-canvas-soft/50'}`}>
                       <div className="flex justify-between items-start mb-3">
-                        <h4 className="text-xl font-bold text-slate-900 group-hover:text-green-700 transition-colors">
+                        <h4 className={`text-[18px] font-medium font-sans transition-colors duration-300 ${isSelected ? 'text-ink' : 'text-body-strong group-hover:text-ink'}`}>
                           {job.title}
                         </h4>
                         <div className="flex items-center gap-3">
-                          {isSelected && <CheckCircle2 className="text-green-600 animate-in zoom-in" size={24} />}
+                          {isSelected && <CheckCircle2 className="text-ink transition-transform duration-300" size={20} />}
                           <button 
                             onClick={(e) => toggleJobExpand(job.id, e)}
-                            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
-                            aria-label={isExpanded ? "Collapse details" : "Expand details"}
+                            className="text-muted hover:text-ink transition-all duration-300 p-1 hover:bg-canvas rounded-full"
                           >
-                            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                            <div className={`transform transition-transform duration-300 ${isExpanded ? 'rotate-180' : 'rotate-0'}`}>
+                              <ChevronDown size={20} />
+                            </div>
                           </button>
                         </div>
                       </div>
                       
-                      <div className="flex flex-wrap gap-3 text-sm font-medium">
-                        <span className="flex items-center gap-1.5 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-lg border border-slate-200">
-                          <MapPin size={16} className="text-slate-400"/> Remote / Hybrid
+                      <div className="flex flex-wrap gap-4 text-[14px] text-body">
+                        <span className="flex items-center gap-1.5 transition-colors group-hover:text-ink">
+                          <MapPin size={16} className="text-muted-soft group-hover:text-muted transition-colors"/> Remote / Hybrid
                         </span>
-                        <span className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg border border-blue-100">
-                          <Clock size={16} className="text-blue-500"/> Full-time
+                        <span className="flex items-center gap-1.5 transition-colors group-hover:text-ink">
+                          <Clock size={16} className="text-muted-soft group-hover:text-muted transition-colors"/> Full-time
                         </span>
                       </div>
                     </div>
 
-                    {/* EXPANDABLE JOB DETAILS DRAWER */}
-                    {isExpanded && (
-                      <div className="border-t border-slate-100 bg-slate-50 p-6 animate-in slide-in-from-top-2 duration-200">
-                        <h5 className="font-semibold text-slate-800 flex items-center gap-2 mb-3">
-                          <FileText size={18} className="text-green-600" />
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}`}>
+                      <div className="border-t border-hairline bg-canvas-soft p-[24px]">
+                        <h5 className="font-sans font-medium text-[15px] text-ink flex items-center gap-2 mb-3">
+                          <FileText size={16} className="text-muted" />
                           About the Role
                         </h5>
-                        <div className="prose prose-sm prose-slate max-w-none">
+                        <div className="prose prose-sm prose-slate max-w-none text-[14px] text-body leading-[1.6]">
                           {job.raw_text ? (
-                            <p className="whitespace-pre-wrap text-slate-600 leading-relaxed">
-                              {job.raw_text}
-                            </p>
+                            <p className="whitespace-pre-wrap">{job.raw_text}</p>
                           ) : (
-                            <p className="text-slate-400 italic">Job description details are currently unavailable.</p>
+                            <p className="italic text-muted-soft">Job description details are currently unavailable.</p>
                           )}
                         </div>
-                        {!isSelected && (
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); handleJobSelect(job); }}
-                            className="mt-6 w-full py-2.5 bg-green-100 hover:bg-green-200 text-green-800 font-semibold rounded-lg transition-colors flex items-center justify-center gap-2"
-                          >
-                            Apply for this Role <ChevronRight size={18} />
-                          </button>
-                        )}
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  </Card>
                 );
               })
             )}
           </div>
         </div>
 
-        {/* RIGHT COLUMN: APPLICATION ZONE (STICKY) */}
+        {/* RIGHT COLUMN: APPLICATION ZONE */}
         <div className="lg:col-span-5 relative">
-          <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/50 sticky top-24">
-            
-            <div className="mb-8">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Quick Apply</h3>
-              {selectedJob ? (
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 text-green-800 rounded-lg text-sm font-medium animate-in fade-in">
-                  Applying for: <span className="font-bold">{selectedJob.title}</span>
-                </div>
-              ) : (
-                <p className="text-slate-500 text-sm">Select a role from the list to begin.</p>
-              )}
-            </div>
-            
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200 flex items-start gap-3 animate-in fade-in">
-                <AlertCircle size={20} className="shrink-0 mt-0.5 text-red-500" />
-                <p>{error}</p>
-              </div>
-            )}
-
-            {!isSuccess ? (
-              <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-                
-                {!selectedJob && (
-                  <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] z-10 flex items-center justify-center rounded-2xl">
-                    <div className="bg-slate-900 text-white px-6 py-3 rounded-full font-medium shadow-lg flex items-center gap-2 animate-bounce">
-                      <ChevronRight size={20} className="rotate-180" /> Select a job first
+          <div className="sticky top-[100px] transition-all duration-500">
+            <Card className="shadow-lg overflow-hidden transition-all duration-500">
+              <div className="mb-8">
+                <h3 className="font-display text-[32px] tracking-tight text-ink mb-2">Apply</h3>
+                <div className="h-[32px] flex items-center">
+                  {selectedJob ? (
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-canvas-soft border border-hairline text-body rounded-full text-[13px] font-medium transition-all duration-300">
+                      Applying for: <span className="font-bold text-ink">{selectedJob.title}</span>
                     </div>
-                  </div>
-                )}
-
-                <div className="space-y-4">
-                  {/* HIDDEN INPUTS FOR QUICK APPLY */}
-                  <div className="hidden">
-                    <input 
-                      type="text" 
-                      value={candidateName} 
-                      onChange={(e) => setCandidateName(e.target.value)} 
-                    />
-                    <input 
-                      type="email" 
-                      value={candidateEmail} 
-                      onChange={(e) => setCandidateEmail(e.target.value)} 
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">Upload Resume (PDF)</label>
-                    <div
-                      className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center transition-all duration-200 group
-                        ${(!selectedJob || isSubmitting) ? 'opacity-50 cursor-not-allowed bg-slate-50 border-slate-200' : 'cursor-pointer hover:bg-green-50/50 hover:border-green-400'}
-                        ${dragActive ? 'border-green-500 bg-green-50 scale-[1.02]' : 'border-slate-300'}`}
-                      onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
-                      onClick={() => selectedJob && !isSubmitting && document.getElementById('resume-upload').click()}
-                    >
-                      <div className={`p-4 rounded-full mb-4 transition-colors ${dragActive || resumeFile ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-400 group-hover:bg-green-50 group-hover:text-green-500'}`}>
-                        <UploadCloud size={32} />
-                      </div>
-                      <p className="text-sm text-slate-700 font-medium text-center mb-1">
-                        Drag & drop your PDF here
-                      </p>
-                      <p className="text-xs text-slate-500 text-center">
-                        or <span className="text-green-600 font-semibold group-hover:underline">browse files</span>
-                      </p>
-                      <input id="resume-upload" type="file" accept=".pdf" className="hidden" onChange={(e) => setResumeFile(e.target.files[0])} disabled={!selectedJob || isSubmitting} />
-                    </div>
-                  </div>
-
-                  {resumeFile && (
-                    <div className="bg-green-50 p-4 rounded-xl border border-green-200 text-sm text-green-800 flex items-center justify-between shadow-sm animate-in fade-in">
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <FileText size={20} className="shrink-0 text-green-600" />
-                        <span className="truncate font-medium">{resumeFile.name}</span>
-                      </div>
-                      {!isSubmitting && (
-                        <button type="button" onClick={() => setResumeFile(null)} className="text-green-600 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors ml-2" aria-label="Remove file">
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <button 
-                  type="submit" 
-                  disabled={!selectedJob || !resumeFile || isSubmitting}
-                  className="w-full bg-slate-900 text-white font-bold py-4 rounded-xl hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none transition-all flex justify-center items-center gap-2 mt-4 text-lg"
-                >
-                  {isSubmitting ? (
-                     <span className="flex items-center gap-3">
-                       <span className="animate-spin rounded-full h-5 w-5 border-2 border-slate-500 border-t-white"></span>
-                       AI Agents Evaluating...
-                     </span>
                   ) : (
-                    <>Submit Application <ChevronRight size={20} /></>
+                    <p className="text-muted text-[15px] transition-opacity duration-300">Select a role from the list to begin.</p>
                   )}
-                </button>
-              </form>
-            ) : (
-              // SUCCESS STATE
-              <div className="text-center py-12 animate-in fade-in zoom-in duration-500">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                  <CheckCircle2 className="text-green-600" size={48} />
                 </div>
-                <h4 className="text-2xl font-bold text-slate-900 mb-3">Application Sent!</h4>
-                <p className="text-slate-600 mb-8 max-w-sm mx-auto leading-relaxed">
-                  Our AI agents have screened your profile. The HR team is reviewing your results right now.
-                </p>
-                <button 
-                  onClick={resetForm}
-                  className="px-6 py-3 bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 hover:text-slate-900 rounded-xl transition-colors"
-                >
-                  Apply to another role
-                </button>
               </div>
-            )}
+              
+              {error && (
+                <div className="mb-6 p-4 bg-canvas-soft text-ink text-[14px] rounded-xl border border-hairline flex items-start gap-3 transition-all duration-300">
+                  <AlertCircle size={20} className="shrink-0 mt-0.5 text-muted" />
+                  <p>{error}</p>
+                </div>
+              )}
+
+              {!isSuccess ? (
+                <form onSubmit={handleSubmit} className="flex flex-col gap-6 relative">
+                  
+                  {!selectedJob && (
+                    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl backdrop-blur-sm bg-canvas/30 transition-opacity duration-300">
+                      <div className="bg-canvas border-2 border-hairline-strong text-ink px-8 py-4 rounded-full font-bold shadow-xl flex items-center gap-3 text-[15px] transform transition-transform hover:scale-105 animate-pulse-slow cursor-not-allowed">
+                        <Briefcase className="text-muted" size={20} />
+                        Select a job first
+                      </div>
+                    </div>
+                  )}
+
+                  <div className={`space-y-4 transition-all duration-500 ${!selectedJob ? 'opacity-30 blur-[1px]' : 'opacity-100'}`}>
+                    <div className="hidden">
+                      <input type="text" value={candidateName} onChange={(e) => setCandidateName(e.target.value)} />
+                      <input type="email" value={candidateEmail} onChange={(e) => setCandidateEmail(e.target.value)} />
+                    </div>
+
+                    <div>
+                      <label className="block text-[14px] font-medium text-ink mb-2">Upload Resume (PDF)</label>
+                      <div
+                        className={`border border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-all duration-200 group
+                          ${(!selectedJob || isSubmitting) ? 'opacity-50 cursor-not-allowed bg-canvas border-hairline' : 'cursor-pointer hover:bg-canvas-soft hover:border-ink'}
+                          ${dragActive ? 'border-ink bg-canvas-soft' : 'border-hairline-strong bg-surface-card'}`}
+                        onDragEnter={handleDrag} onDragOver={handleDrag} onDragLeave={handleDrag} onDrop={handleDrop}
+                        onClick={() => selectedJob && !isSubmitting && document.getElementById('resume-upload').click()}
+                      >
+                        <div className={`p-4 rounded-full mb-4 transition-colors ${dragActive || resumeFile ? 'bg-canvas-soft text-ink border border-hairline' : 'bg-canvas text-muted border border-transparent group-hover:border-hairline'}`}>
+                          <UploadCloud size={24} />
+                        </div>
+                        <p className="text-[14px] text-ink font-medium text-center mb-1">
+                          Drag & drop your PDF here
+                        </p>
+                        <p className="text-[13px] text-muted text-center">
+                          or <span className="text-ink font-medium underline">browse files</span>
+                        </p>
+                        <input id="resume-upload" type="file" accept=".pdf" className="hidden" onChange={(e) => setResumeFile(e.target.files[0])} disabled={!selectedJob || isSubmitting} />
+                      </div>
+                    </div>
+
+                    {resumeFile && (
+                      <div className="bg-canvas-soft p-4 rounded-md border border-hairline text-[14px] text-ink flex items-center justify-between">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <FileText size={18} className="shrink-0 text-muted" />
+                          <span className="truncate font-medium">{resumeFile.name}</span>
+                        </div>
+                        {!isSubmitting && (
+                          <button type="button" onClick={() => setResumeFile(null)} className="text-muted hover:text-ink p-1 transition-colors ml-2">
+                            <X size={16} />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <Button 
+                    type="submit" 
+                    disabled={!selectedJob || !resumeFile || isSubmitting}
+                    className="w-full mt-4 h-[48px]"
+                  >
+                    {isSubmitting ? "Evaluating..." : "Submit Application"}
+                  </Button>
+                </form>
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center py-12 px-6">
+                  <div className="relative mb-8">
+                    <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse-slow"></div>
+                    <div className="w-20 h-20 bg-canvas border-2 border-green-500/30 rounded-full flex items-center justify-center relative z-10 shadow-sm">
+                      <CheckCircle2 className="text-green-600" size={40} strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <h4 className="text-[32px] font-display text-ink mb-4 tracking-tight">Application Sent!</h4>
+                  <p className="text-body text-[16px] mb-10 max-w-sm mx-auto leading-relaxed">
+                    Our AI agent has successfully screened your profile. The HR team is now reviewing your personalized assessment.
+                  </p>
+                  <Button variant="outline" onClick={resetForm} className="px-8 py-3 rounded-full hover:shadow-md transition-all">
+                    Apply to another role
+                  </Button>
+                </div>
+              )}
+            </Card>
           </div>
         </div>
 
       </main>
+
+      <Footer />
     </div>
   );
 }

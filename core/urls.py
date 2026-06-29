@@ -16,4 +16,8 @@ urlpatterns = [
     path('delete-jd/<int:jd_id>/', views.delete_jd_view, name='delete_jd'),
     path('edit-jd/<int:jd_id>/', views.edit_jd_view, name='edit_jd'),
     path('clerk-webhook/', webhook_views.clerk_webhook_view, name='clerk_webhook'),
+    
+    # Beyond Presence / OpenAI Interview Routes
+    path('interviews/schedule/', views.schedule_interview_view, name='schedule_interview'),
+    path('interviews/get_token/<str:token>/', views.get_openai_ephemeral_token, name='get_openai_ephemeral_token'),
 ]

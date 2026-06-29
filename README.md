@@ -17,6 +17,12 @@ Matcha is an AI-powered resume and job description (JD) matching platform. It ev
 - Integrating user authentication flows with Clerk to the backend.
 - Full end-to-end integration of the AI evaluation results into the frontend UI.
 
+## 🎉 Recent Updates
+- **AI Interview Integration (Beyond Presence AI)**: Integrated the Amrita AI agent via a seamless iframe implementation.
+- **Enhanced Proctoring Engine**: Calibrated head-turn and look-away heuristics to reduce false positives and improved TensorFlow video processing.
+- **Automated Interview Invitations**: Developed a Celery background task (`send_interview_email_task`) that sends beautifully styled HTML emails to candidates upon scheduling.
+- **HR Dashboard UI Refactor**: Transformed the HR Dashboard into a modern Master-Detail split layout (a left-hand candidate card list and a massive right-hand rich profile view) utilizing `react-hot-toast` for elegant notifications.
+
 ## 📂 File Structure
 
 The project is structured into two main parts: the Django backend and the React frontend.

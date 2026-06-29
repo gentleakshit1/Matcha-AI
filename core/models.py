@@ -55,3 +55,22 @@ class EvaluationReport(models.Model):
 
     def __str__(self):
         return f"Report for {self.candidate.candidate_name}"
+
+import uuid
+
+class InterviewSession(models.Model):
+    candidate = models.ForeignKey(Candidate, on_delete=models.CASCADE, related_name='interview_sessions')
+    session_token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    status = models.CharField(max_length=50, default='Pending', choices=[
+        ('Pending', 'Pending'),
+        ('In_Progress', 'In Progress'),
+        ('Completed', 'Completed'),
+        ('Failed', 'Failed')
+    ])
+    transcript = models.TextField(blank=True, null=True)
+    interview_score = models.IntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Interview for {self.candidate.candidate_name} ({self.status})"
