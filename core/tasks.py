@@ -1,9 +1,7 @@
-from celery import shared_task
 from django.core.mail import send_mail
 from .models import Candidate, EvaluationReport, UserProfile
 from .agents import matcha_agent_app
 
-@shared_task
 def process_resume_task(candidate_id):
     try:
         candidate = Candidate.objects.select_related('job_description').get(id=candidate_id)
@@ -177,7 +175,6 @@ def process_resume_task(candidate_id):
         # Note: In a production app, you might update the candidate status to "Error"
         return f"Failed to process candidate {candidate_id}: {str(e)}"
 
-@shared_task
 def send_interview_email_task(candidate_email, candidate_name, interview_link, job_title):
     try:
         subject = f"Matcha Update: Interview Invitation for {job_title}"

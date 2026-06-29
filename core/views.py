@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from pypdf import PdfReader
 from django.core.mail import send_mail
+import threading
 
 # Import your local database models and the LangGraph multi-agent application
 from .models import JobDescription, Candidate, EvaluationReport, UserProfile, InterviewSession
@@ -138,9 +139,9 @@ def upload_resume_view(request):
         status='Evaluating'         # Initial status while AI processes
     )
 
-    # Dispatch Celery background task
+    # Dispatch Python background thread instead of Celery
     from .tasks import process_resume_task
-    process_resume_task.delay(candidate.id)
+    threading.Thread(target=process_resume_task, args=(candidate.id,)).start()
 
     return Response({
         "message": "Resume uploaded successfully. AI analysis is running in the background.",
@@ -472,12 +473,15 @@ def schedule_interview_view(request):
         interview_link = f"{frontend_url}/interview/{session.session_token}"
         
         if candidate.email:
-            send_interview_email_task.delay(
-                candidate_email=candidate.email,
-                candidate_name=candidate.candidate_name,
-                interview_link=interview_link,
-                job_title=candidate.job_description.title if candidate.job_description else "the role"
-            )
+            threading.Thread(
+                target=send_interview_email_task,
+                kwargs={
+                    "candidate_email": candidate.email,
+                    "candidate_name": candidate.candidate_name,
+                    "interview_link": interview_link,
+                    "job_title": candidate.job_description.title if candidate.job_description else "the role"
+                }
+            ).start()
         
         return Response({
             "message": "Interview scheduled successfully.",
