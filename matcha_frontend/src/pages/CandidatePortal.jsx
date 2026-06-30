@@ -131,10 +131,10 @@ export default function CandidatePortal() {
         </p>
       </div>
 
-      <main className="max-w-[1200px] mx-auto w-full px-6 py-[64px] flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <main className="max-w-[1200px] mx-auto w-full px-6 py-[64px] flex-1 grid grid-cols-1 md:grid-cols-12 gap-8">
         
         {/* LEFT COLUMN: JOB BOARD */}
-        <div className="lg:col-span-7">
+        <div className="md:col-span-7">
           <div className="flex items-center justify-between mb-6 border-b border-hairline pb-4">
             <h3 className="text-[20px] font-medium font-sans text-ink flex items-center gap-2">
               <Briefcase size={20} className="text-muted" />
@@ -214,7 +214,7 @@ export default function CandidatePortal() {
         </div>
 
         {/* RIGHT COLUMN: APPLICATION ZONE */}
-        <div className="lg:col-span-5 relative">
+        <div className="md:col-span-5 relative">
           <div className="sticky top-[100px] transition-all duration-500">
             <Card className="shadow-lg overflow-hidden transition-all duration-500">
               <div className="mb-8">
@@ -301,18 +301,18 @@ export default function CandidatePortal() {
                   </Button>
                 </form>
               ) : (
-                <div className="flex flex-col items-center justify-center text-center py-12 px-6">
-                  <div className="relative mb-8">
-                    <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl animate-pulse-slow"></div>
-                    <div className="w-20 h-20 bg-canvas border-2 border-green-500/30 rounded-full flex items-center justify-center relative z-10 shadow-sm">
-                      <CheckCircle2 className="text-green-600" size={40} strokeWidth={2.5} />
+                <div className="flex flex-col items-center justify-center text-center py-12 px-6 animate-in fade-in zoom-in duration-500">
+                  <div className="relative mb-8 group">
+                    <div className="absolute inset-0 bg-[#10b981]/20 rounded-full blur-xl animate-pulse"></div>
+                    <div className="w-20 h-20 bg-[#10b981]/10 border-2 border-[#10b981]/30 rounded-full flex items-center justify-center relative z-10 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 cursor-default">
+                      <CheckCircle2 className="text-[#10b981]" size={40} strokeWidth={2.5} />
                     </div>
                   </div>
-                  <h4 className="text-[32px] font-display text-ink mb-4 tracking-tight">Application Sent!</h4>
-                  <p className="text-body text-[16px] mb-10 max-w-sm mx-auto leading-relaxed">
+                  <h4 className="text-[32px] font-display text-ink mb-4 tracking-tight animate-in slide-in-from-bottom-2 duration-500 delay-100">Application Sent!</h4>
+                  <p className="w-full text-body text-[16px] mb-10 max-w-md mx-auto leading-relaxed text-center animate-in slide-in-from-bottom-2 duration-500 delay-200">
                     Our AI agent has successfully screened your profile. The HR team is now reviewing your personalized assessment.
                   </p>
-                  <Button variant="outline" onClick={resetForm} className="px-8 py-3 rounded-full hover:shadow-md transition-all">
+                  <Button variant="outline" onClick={resetForm} className="px-8 py-3 rounded-full hover:shadow-md hover:-translate-y-0.5 transition-all animate-in slide-in-from-bottom-2 duration-500 delay-300">
                     Apply to another role
                   </Button>
                 </div>
