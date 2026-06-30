@@ -68,11 +68,10 @@ def local_vector_storage_node(state: IngestionState) -> Dict[str, Any]:
     document_chunks = state["chunks"]
     target_collection = state["collection_name"]
     
-    # Using OpenAI embeddings through OpenRouter
+    # Using standard OpenAI embeddings
     embeddings_engine = OpenAIEmbeddings(
-        model="openai/text-embedding-3-small",
-        api_key=os.environ.get("OPENROUTER_API_KEY", ""),
-        base_url="https://openrouter.ai/api/v1"
+        model="text-embedding-3-small",
+        api_key=os.environ.get("OPENAI_API_KEY", "")
     )
     
     pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
