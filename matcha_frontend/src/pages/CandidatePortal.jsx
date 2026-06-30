@@ -301,7 +301,7 @@ export default function CandidatePortal() {
                   </Button>
                 </form>
               ) : (
-                <div className="flex flex-col items-center justify-center text-center py-12 px-6 animate-in fade-in zoom-in duration-500">
+                <div className="w-full flex flex-col items-center justify-center text-center py-12 px-6 animate-in fade-in zoom-in duration-500">
                   <div className="relative mb-8 group">
                     <div className="absolute inset-0 bg-[#10b981]/20 rounded-full blur-xl animate-pulse"></div>
                     <div className="w-20 h-20 bg-[#10b981]/10 border-2 border-[#10b981]/30 rounded-full flex items-center justify-center relative z-10 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 cursor-default">
