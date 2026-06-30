@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import UploadJDModal from '../components/UploadJDModal';
-import { UploadCloud, X, Trash2, ChevronRight, CheckCircle2, Copy, FileText, Info } from 'lucide-react';
+import { UploadCloud, X, Trash2, ChevronRight, CheckCircle2, Copy, FileText, Info, Link, Loader2 } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
@@ -18,6 +18,7 @@ export default function HRDashboard() {
   const [selectedCandidate, setSelectedCandidate] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('All');
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const { getToken, isLoaded } = useAuth();
   const navigate = useNavigate();
 
@@ -94,6 +95,7 @@ export default function HRDashboard() {
 
   const handleScheduleInterview = async (candidateId) => {
     try {
+      setIsGeneratingLink(true);
       toast.loading("Generating link and sending email...", { id: 'schedule-toast' });
       const token = await getToken();
       const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/interviews/schedule/`, {
@@ -106,12 +108,16 @@ export default function HRDashboard() {
       if (selectedCandidate && selectedCandidate.id === candidateId) {
         setSelectedCandidate({
           ...selectedCandidate,
+          status: 'Interview',
           generated_link: response.data.interview_link
         });
       }
+      setCandidates(prev => prev.map(c => c.id === candidateId ? { ...c, status: 'Interview', generated_link: response.data.interview_link } : c));
     } catch (err) {
       console.error(err);
       toast.error("Failed to schedule interview. Ensure backend is running.", { id: 'schedule-toast' });
+    } finally {
+      setIsGeneratingLink(false);
     }
   };
 
@@ -256,6 +262,18 @@ export default function HRDashboard() {
                         </span>
                       </div>
                     )}
+                    
+                    {selectedCandidate.status === 'Shortlisted' && (
+                       <Button 
+                         onClick={() => handleScheduleInterview(selectedCandidate.id)}
+                         disabled={isGeneratingLink}
+                         className="mb-2 bg-ink text-canvas hover:bg-ink/90 flex items-center gap-2"
+                       >
+                         {isGeneratingLink ? <Loader2 className="animate-spin" size={16}/> : <Link size={16}/>}
+                         Move to Interview & Generate Link
+                       </Button>
+                    )}
+
                     <div className="mt-2 text-right">
                        <span className="text-[11px] font-bold text-muted uppercase tracking-wider block mb-1">Pipeline Stage</span>
                        <select 
@@ -271,6 +289,34 @@ export default function HRDashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* AI Interview Setup (if Interview stage) */}
+                {selectedCandidate.status === 'Interview' && (
+                  <div className="mb-8 p-6 bg-surface-card border-2 border-hairline-strong rounded-2xl shadow-sm transition-all animate-in fade-in zoom-in duration-500">
+                    <h3 className="text-[14px] font-bold text-ink uppercase tracking-wide mb-4 flex items-center gap-2">
+                      <Link size={18} className="text-[#10b981]"/>
+                      AI Interview Link Generated
+                    </h3>
+                    <p className="text-[13px] text-body mb-4 leading-relaxed">An automated email has been dispatched to <span className="font-bold text-ink">{selectedCandidate.email}</span> with this unique interview link. The AI agent is ready to conduct the interview.</p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 bg-canvas border border-hairline rounded-lg px-4 py-3 text-[14px] font-mono text-ink truncate select-all shadow-inner">
+                        {selectedCandidate.generated_link || "Link will appear here... please wait or refresh."}
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => {
+                           if(selectedCandidate.generated_link) {
+                               navigator.clipboard.writeText(selectedCandidate.generated_link);
+                               toast.success("Link Copied!");
+                           }
+                        }}
+                        className="px-4 py-3 hover:shadow-md transition-all"
+                      >
+                        <Copy size={16} className="mr-2"/> Copy Link
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Profile Body */}
                 <div className="space-y-8">
