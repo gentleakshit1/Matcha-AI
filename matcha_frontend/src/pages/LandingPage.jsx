@@ -65,7 +65,7 @@ export default function LandingPage() {
           }
         } catch (err) {
           console.error("Sync error:", err);
-          setStatusMessage("Error syncing profile. Please try again.");
+          setStatusMessage(`Error syncing profile: ${err.response?.data?.error || err.message}`);
           setIsSyncing(false);
         }
       };

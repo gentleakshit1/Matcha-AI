@@ -52,8 +52,8 @@ export default function UploadJDModal({ isOpen, onClose, onRefresh }) {
         }, 300);
       }, 500);
     } catch (err) {
-      console.error("Upload failed", err);
-      setError("Failed to upload JD. Please try again.");
+      console.error(err);
+      setError(`Failed to upload JD: ${err.response?.data?.error || err.message}`);
     } finally {
       setIsUploading(false);
     }
