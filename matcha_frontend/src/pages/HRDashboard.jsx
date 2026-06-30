@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/DashboardLayout';
 import UploadJDModal from '../components/UploadJDModal';
-import { UploadCloud, X, Trash2, ChevronRight, CheckCircle2, Copy, FileText } from 'lucide-react';
+import { UploadCloud, X, Trash2, ChevronRight, CheckCircle2, Copy, FileText, Info } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 
@@ -276,9 +276,21 @@ export default function HRDashboard() {
                 <div className="space-y-8">
                   {selectedCandidate.status === 'Evaluating' ? (
                     <div className="py-20 flex flex-col items-center justify-center bg-surface-card rounded-2xl border border-hairline shadow-sm text-center px-6">
-                      <div className="animate-spin rounded-full h-10 w-10 border-2 border-ink border-t-transparent mb-6"></div>
-                      <h3 className="font-sans font-medium text-ink text-[18px]">AI Evaluation in Progress</h3>
-                      <p className="text-[14px] text-muted mt-2 max-w-sm">The agent is currently deeply analyzing the resume, extracting skills, and generating a tailored interview strategy...</p>
+                      <div className="flex items-center justify-center gap-2 relative group cursor-help mb-4">
+                        <h3 className="font-sans font-medium text-ink text-[18px]">AI Evaluation in Progress</h3>
+                        <Info size={18} className="text-muted group-hover:text-ink transition-colors" />
+                        
+                        {/* Hover Tooltip Card */}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-3 hidden group-hover:block w-72 bg-ink text-canvas text-[13px] font-medium leading-relaxed p-4 rounded-xl shadow-xl z-50 text-left">
+                          The agent is currently deeply analyzing the resume, extracting skills, and generating a tailored interview strategy...
+                          {/* Triangle pointer */}
+                          <div className="absolute -top-2 left-1/2 -translate-x-1/2 border-4 border-transparent border-b-ink"></div>
+                        </div>
+                      </div>
+
+                      <p className="text-[#10b981] font-bold text-[14px] bg-[#10b981]/10 px-4 py-2 rounded-lg inline-flex items-center gap-2">
+                        <CheckCircle2 size={16} /> Resume successfully queued for AI processing!
+                      </p>
                     </div>
                   ) : (
                     <>
