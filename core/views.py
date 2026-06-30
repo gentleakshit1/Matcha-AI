@@ -349,14 +349,15 @@ def delete_candidate_view(request, candidate_id):
     try:
         candidate = Candidate.objects.get(id=candidate_id)
         
-        # Purge their specific RAG embeddings from ChromaDB
-        import chromadb
+        # Purge their specific RAG embeddings from Pinecone
         import os
+        from pinecone import Pinecone
         try:
-            client = chromadb.PersistentClient(path=os.path.join(os.getcwd(), "chroma_storage"))
-            client.delete_collection(f"candidate_resume_{candidate_id}")
+            pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY", ""))
+            index = pc.Index("matcha-index")
+            index.delete(delete_all=True, namespace=f"candidate_resume_{candidate_id}")
         except Exception as e:
-            print(f"Chroma delete warning: {e}")
+            print(f"Pinecone delete warning: {e}")
             
         candidate.delete()
         return Response({"message": "Candidate deleted successfully"}, status=status.HTTP_200_OK)
@@ -370,7 +371,17 @@ def delete_jd_view(request, jd_id):
     """API to delete a Job Description. Its related candidates will be cascade deleted."""
     try:
         jd = JobDescription.objects.get(id=jd_id)
-        # Optional: could clean up Chroma collections here if using real persistent Chroma
+        
+        # Purge their specific RAG embeddings from Pinecone
+        import os
+        from pinecone import Pinecone
+        try:
+            pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY", ""))
+            index = pc.Index("matcha-index")
+            index.delete(delete_all=True, namespace=f"jd_collection_{jd_id}")
+        except Exception as e:
+            print(f"Pinecone delete warning: {e}")
+            
         jd.delete()
         return Response({"message": "Job Description deleted successfully"}, status=status.HTTP_200_OK)
     except JobDescription.DoesNotExist:
