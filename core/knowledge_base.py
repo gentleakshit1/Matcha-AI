@@ -3,9 +3,8 @@ from typing import TypedDict, Dict, Any, List
 from langgraph.graph import StateGraph, START, END
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-from langchain_pinecone import PineconeVectorStore
+from langchain_pinecone import PineconeVectorStore, PineconeEmbeddings
 from pinecone import Pinecone
-from langchain_openai import OpenAIEmbeddings
 
 # =====================================================================
 # 1. STATE DEFINITION MATRIX
@@ -65,13 +64,12 @@ def local_vector_storage_node(state: IngestionState) -> Dict[str, Any]:
     Node 3: Compute embedding vectors locally and save them to an isolated folder using Chroma.
     """
     print("\n--- [Node 3: Indexing vectors into local Chroma DB instance...] ---")
-    document_chunks = state["chunks"]
-    target_collection = state["collection_name"]
+    pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
     
-    # Using standard OpenAI embeddings
-    embeddings_engine = OpenAIEmbeddings(
-        model="text-embedding-3-small",
-        api_key=os.environ.get("OPENAI_API_KEY", "")
+    # Using Pinecone's free integrated Llama embeddings (no OpenAI key needed!)
+    embeddings_engine = PineconeEmbeddings(
+        model="llama-text-embed-v2",
+        pinecone_api_key=pinecone_api_key
     )
     
     pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
