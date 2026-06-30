@@ -64,6 +64,8 @@ def local_vector_storage_node(state: IngestionState) -> Dict[str, Any]:
     Node 3: Compute embedding vectors locally and save them to an isolated folder using Chroma.
     """
     print("\n--- [Node 3: Indexing vectors into local Chroma DB instance...] ---")
+    document_chunks = state["chunks"]
+    target_collection = state["collection_name"]
     pinecone_api_key = os.environ.get("PINECONE_API_KEY", "")
     
     # Using Pinecone's free integrated Llama embeddings (no OpenAI key needed!)
