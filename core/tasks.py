@@ -182,6 +182,7 @@ def process_resume_task(candidate_id):
         return f"Failed to process candidate {candidate_id}: {str(e)}"
 
 def send_interview_email_task(candidate_email, candidate_name, interview_link, job_title):
+    print(f"DEBUG: Entering send_interview_email_task for email: '{candidate_email}'", flush=True)
     try:
         subject = f"Matcha Update: Interview Invitation for {job_title}"
         body = f"Hi {candidate_name},\n\nCongratulations! You have been shortlisted for the {job_title} role.\n\nYour AI Interview is ready. Please complete it within the next 48 hours.\n\nInterview Link: {interview_link}\n\nBest regards,\nThe Matcha HR Team"
@@ -208,8 +209,10 @@ def send_interview_email_task(candidate_email, candidate_name, interview_link, j
           </div>
         </div>
         """
+        print(f"DEBUG: Attempting to send interview email to {candidate_email}...", flush=True)
         send_mail(subject, body, None, [candidate_email], fail_silently=False, html_message=html_body)
+        print("DEBUG: Interview email sent successfully!", flush=True)
         return f"Interview email sent to {candidate_email}"
     except Exception as e:
-        print(f"Error sending interview email: {str(e)}")
+        print(f"Error sending interview email: {str(e)}", flush=True)
         return f"Failed to send email to {candidate_email}: {str(e)}"
