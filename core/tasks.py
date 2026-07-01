@@ -50,6 +50,8 @@ def process_resume_task(candidate_id):
             final_rank_score=float(final_graph_state.get("skill_match_score", 0))
         )
         
+        print(f"DEBUG: Candidate email in DB is: '{candidate.email}'", flush=True)
+        
         if candidate.email:
             SHORTLIST_THRESHOLD = 85
             if report.skill_match_score >= SHORTLIST_THRESHOLD:
@@ -161,17 +163,21 @@ def process_resume_task(candidate_id):
                 </div>
                 """
             
+            print(f"DEBUG: Attempting to dispatch email to {candidate.email}...", flush=True)
             # Send emails
             send_mail(subject, body, None, [candidate.email], fail_silently=False, html_message=html_body)
+            print("DEBUG: Candidate email dispatched successfully!", flush=True)
             
             hr_emails = list(UserProfile.objects.filter(role='hr').values_list('email', flat=True))
+            print(f"DEBUG: Found HR emails: {hr_emails}", flush=True)
             if hr_emails:
                 send_mail(hr_subject, hr_body, None, hr_emails, fail_silently=False, html_message=hr_html_body)
+                print("DEBUG: HR emails dispatched successfully!", flush=True)
             
         return f"Successfully processed candidate {candidate_id} - Score: {report.skill_match_score}"
         
     except Exception as e:
-        print(f"Celery Background Task Error: {str(e)}")
+        print(f"Celery Background Task Error: {str(e)}", flush=True)
         # Note: In a production app, you might update the candidate status to "Error"
         return f"Failed to process candidate {candidate_id}: {str(e)}"
 
